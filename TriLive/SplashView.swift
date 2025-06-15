@@ -1,4 +1,12 @@
 //
+//  SplashView.swift
+//  TriLive
+//
+//  Created by Anthony Qin on 6/12/25.
+//
+
+
+//
 //  SpashView.swift
 //  TriLive
 //

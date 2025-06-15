@@ -11,7 +11,7 @@ import SwiftUI
 struct TriLiveApp: App {
     var body: some Scene {
         WindowGroup {
-            SpashView()
+            SplashView()
         }
     }
 }
