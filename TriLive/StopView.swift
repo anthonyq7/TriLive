@@ -6,6 +6,7 @@
 //
 
 //DO NOT USE FOR NOW (EXPERIMENTING)
+/*
 import SwiftUI
 
 struct StopListView: View {
@@ -54,4 +55,4 @@ struct StopDetailView: View {
 #Preview {
     StopListView()
 }
-
+*/
