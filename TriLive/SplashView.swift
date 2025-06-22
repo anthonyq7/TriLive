@@ -25,7 +25,7 @@ struct SplashView: View {
             Color.appBackground.edgesIgnoringSafeArea(.all)
             
             if self.isActive {
-                HomeView()
+                MainTabView()
                     .transition(.scale)
             } else {
                 SplashScreen()
