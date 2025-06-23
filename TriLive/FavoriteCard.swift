@@ -22,7 +22,7 @@ struct FavoriteCard: View {
                 .background(route.isMAX ? Color.blue : Color.green)
                 .clipShape(Circle())
 
-            //he route name
+            //the route name
             Text(route.name)
                 .font(.body)
                 .foregroundColor(.white)
