@@ -7,43 +7,16 @@
 
 import SwiftUI
 import UIKit
-
-//DUMMY DATA BELOW
-let dummyRoutes1 = [
-    Route(id: 12, name: "Line 12 - Barbur/Sandy Blvd", arrivalTime: 1545, direction: "Eastbound to Sandy", realTime: 1559, isMAX: false),
-    Route(id: 75, name: "Line 75 - Chavez/Lombard", arrivalTime: 1550, direction: "Northbound to Lombard", realTime: 1551, isMAX: false),
-    Route(id: 1, name: "MAX Green Line", arrivalTime: 1548, direction: "Southbound to Clackamas",realTime: 1550, isMAX: true),
-    Route(id: 2, name: "MAX Blue Line", arrivalTime: 1553, direction: "Eastbound to Gresham", realTime: 1553, isMAX: true)
-]
-
-
-let dummyRoutes2 = [
-    Route(id: 72,name: "Line 72 - Killingsworth/82nd Ave",arrivalTime: 1600, direction: "Southbound to Clackamas Town Center", realTime: 1603,isMAX: false),
-    Route(id: 19,name: "Line 19 - Woodstock/Glisan",arrivalTime: 1605,direction: "Eastbound to Gateway Transit Center",realTime: 1607,isMAX: false),
-    Route(id: 3,name: "MAX Red Line",arrivalTime: 1602,direction: "Westbound to Beaverton TC",realTime: 1601,isMAX: true)
-]
-
-let stops = [
-    Stop(
-        id: 258,
-        name: "Hawthorne & 12th",
-        routeList: dummyRoutes1
-    ),
-    Stop(
-        id: 312,
-        name: "NE 82nd & Glisan",
-        routeList: dummyRoutes2
-    )
-]
+import Foundation
 
 //START OF HomeView
 struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        //will put the actual favorite routes saved
-        HomeView(favoriteRouteIDs: .constant([12, 75]))
-            .preferredColorScheme(.dark)
-    }
+  @State static private var previewFavorites: Set<Int> = []
+  static var previews: some View {
+    HomeView(favoriteRouteIDs: $previewFavorites)
+  }
 }
+
 
 struct HomeView: View {
     @Binding var favoriteRouteIDs: Set<Int>
@@ -54,6 +27,7 @@ struct HomeView: View {
     @State private var selectedRouteID: Int? = nil
     //for the selected route popping out
     @State private var focusedRoute: Route? = nil
+    @State private var navigationPath = NavigationPath()
     
     @State var selectedStop: Stop = Stop(id: 0, name: "Placeholder", routeList: [])
     @State var selectedRoute: Route = Route(id: 0, name: "Placeholder", arrivalTime: 0, direction: "Placeholder", realTime: 0, isMAX: false)
@@ -70,10 +44,7 @@ struct HomeView: View {
     }
     
     private func startTracking(_ route: Route){
-        //moves to start view
-        //shows route details
-        //shows stop button
-        //shows live loccation at the bottom
+        navigationPath.append(route)
         print("Now starting route:", route.name)
     }
     
@@ -89,23 +60,25 @@ struct HomeView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 24){
-                RouteCard(
-                    parentStop:  selectedStop,
-                    line:        route,
-                    isSelected:  route.id == selectedRouteID,
-                    onTap: { cardTapped(route) },
-                    isFavorited: favoriteRouteIDs.contains(route.id),
-                    toggleFavorite: {
-                        if favoriteRouteIDs.contains(route.id) {
-                            favoriteRouteIDs.remove(route.id)
-                        } else {
-                            favoriteRouteIDs.insert(route.id)
+                NavigationLink(value: route){
+                    RouteCard(
+                        parentStop:  selectedStop,
+                        line:        route,
+                        isSelected:  route.id == selectedRouteID,
+                        onTap: { cardTapped(route) },
+                        isFavorited: favoriteRouteIDs.contains(route.id),
+                        toggleFavorite: {
+                            if favoriteRouteIDs.contains(route.id) {
+                                favoriteRouteIDs.remove(route.id)
+                            } else {
+                                favoriteRouteIDs.insert(route.id)
+                            }
                         }
-                    }
-                )
+                    )
+                }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color(.secondarySystemBackground))
+                .background(Color(.systemBackground))
                 .cornerRadius(16)
                 .shadow(radius: 20)
                 .padding(.horizontal, 40)
@@ -170,50 +143,60 @@ struct HomeView: View {
                 .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival && $0.minutesUntilArrival < 60 }
             
             ForEach(upcoming) { route in
-                RouteCard(
-                    parentStop:  selectedStop,
-                    line:        route,
-                    isSelected:  route.id == selectedRouteID,
-                    onTap: { cardTapped(route) },
-                    isFavorited: favoriteRouteIDs.contains(route.id),
-                    toggleFavorite: {
-                        if favoriteRouteIDs.contains(route.id) {
-                            favoriteRouteIDs.remove(route.id)
-                        } else {
-                            favoriteRouteIDs.insert(route.id)
+                NavigationLink(value: route){
+                    RouteCard(
+                        parentStop:  selectedStop,
+                        line:        route,
+                        isSelected:  route.id == selectedRouteID,
+                        onTap: { cardTapped(route) },
+                        isFavorited: favoriteRouteIDs.contains(route.id),
+                        toggleFavorite: {
+                            if favoriteRouteIDs.contains(route.id) {
+                                favoriteRouteIDs.remove(route.id)
+                            } else {
+                                favoriteRouteIDs.insert(route.id)
+                            }
                         }
-                    }
-                )
-                .padding(.horizontal, 24)
+                    )
+                    .padding(.horizontal, 24)
+                }
             }
         }
     }
     
     var body: some View {
-        ZStack{
-            
-            Color.appBackground
-                .ignoresSafeArea()
-            
-            ScrollView (showsIndicators: false) {
-                VStack(spacing: 16) {
-                    ExtractedLogoAndWelcomeView()
-                    //Peep below for extracted structure of searchBar
-                    searchBar(
-                        searchQuery:  $searchQuery,
-                        stopSelected: $stopSelected,
-                        selectedStop: $selectedStop,
-                        stopList:     filteredStops
-                    )
-                    if stopSelected {
-                        availableSection
+        NavigationStack(path: $navigationPath) {
+            ZStack{
+                Color.appBackground
+                    .ignoresSafeArea()
+                
+                ScrollView (showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        ExtractedLogoAndWelcomeView()
+                        //Peep below for extracted structure of searchBar
+                        searchBar(
+                            searchQuery:  $searchQuery,
+                            stopSelected: $stopSelected,
+                            selectedStop: $selectedStop,
+                            stopList:     filteredStops
+                        )
+                        if stopSelected {
+                            availableSection
+                        }
                     }
+                    .padding(.top, 24)
                 }
-            }
-            //when the route card is picked and focused on, it calls blurOverlay and focuses on the selected route
-            if let focused = focusedRoute{
-                blurOverlay(focused)
-                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                .background(Color.appBackground.ignoresSafeArea())
+                
+                .navigationDestination(for: Route.self) { route in
+                    let stop = stops.first { $0.routeList.contains(route) }!
+                    RouteDetailView(parentStop: stop, route: route)
+                }
+                //when the route card is picked and focused on, it calls blurOverlay and focuses on the selected route
+                if let focused = focusedRoute{
+                    blurOverlay(focused)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+                }
             }
         }
     }
@@ -229,7 +212,6 @@ struct HomeView: View {
         
         var body: some View {
             VStack(spacing: 0) { //spacing 0 so that the stop list is seamless
-                
                 HStack{ //This is the textfield and icon area
                     
                     TextField("Enter a stop", text: $searchQuery)
@@ -237,7 +219,7 @@ struct HomeView: View {
                         .onSubmit { performSearch() }
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .foregroundStyle(Color.black)
+                        .foregroundStyle(.primary)
                         .autocapitalization(.none)
                         .autocorrectionDisabled(true)
                     
@@ -245,12 +227,12 @@ struct HomeView: View {
                     
                     Image(systemName: "magnifyingglass")
                         .onTapGesture { performSearch() }
-                        .foregroundStyle(Color.black)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
+                        .fill(Color(.secondarySystemBackground))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
@@ -264,6 +246,8 @@ struct HomeView: View {
                         stopSelected = false
                     }
                 }
+                
+                
                 
                 //Below is the logic of the result list
                 if !searchQuery.isEmpty && !stopSelected{
@@ -283,7 +267,7 @@ struct HomeView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.white) //Need to add .onTapGesture
+                            .background(Color(.white)) //Need to add .onTapGesture
                             
                             Divider()
                                 .background(Color.gray.opacity(0.6))
@@ -291,10 +275,10 @@ struct HomeView: View {
                             ForEach(stopList) { stop in
                                 Text(stop.name + " (Stop " + stop.id.description + ")")
                                     .padding(12)
+                                    .foregroundStyle(Color.black)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .foregroundStyle(Color.black)
                                     .background(Color.white)
                                     .onTapGesture {
                                         searchQuery = stop.name
@@ -308,7 +292,6 @@ struct HomeView: View {
                         }
                     }
                     .frame(maxHeight: 150)
-                    .background(Color.white)
                     .cornerRadius(8)
                     .padding(.horizontal, 24)
                     .zIndex(2)
@@ -317,14 +300,13 @@ struct HomeView: View {
         }
         
         private func performSearch() {
-            if let match = stopList.first(where: {
-                $0.name.lowercased().hasPrefix(searchQuery.lowercased())
-            }) {
+            if let match = stopList.first(where: { $0.name.lowercased().hasPrefix(searchQuery.lowercased()) }) {
                 selectedStop = match
-                stopSelected  = true
+                stopSelected = true
             }
         }
     }
+    
     
     
     

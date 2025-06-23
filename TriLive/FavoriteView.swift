@@ -20,53 +20,39 @@ struct FavoritesView: View {
     let stops: [Stop]
 
 
-    private var favoriteRoutes: [Route] {
-        stops
-            .flatMap { $0.routeList }
-            .filter { favoriteRouteIDs.contains($0.id) }
-    }
+    var favoriteRoutes: [ (stop: Stop, route: Route) ] {
+       stops
+         .flatMap { stop in stop.routeList.map { (stop, $0) } }
+         .filter { favoriteRouteIDs.contains($0.1.id) }
+     }
 
-    var body: some View {
-        NavigationView {
-            ZStack {
-                
-                Color.appBackground.edgesIgnoringSafeArea(.all)
-                
-                ScrollView {
-                    LazyVStack {
-                
-                        ForEach(favoriteRoutes) { route in
-                            
-                            let parent = stops.first {
-                                $0.routeList.contains { $0.id == route.id }
-                            }!
-                            
-                            FavoriteCard(
-                                parentStop: parent,
-                                route:      route,
-                                onRemove: {favoriteRouteIDs.remove(route.id)}
-                            )
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets())
-                            .padding(.horizontal, 16)
-                        }
-                        .padding(.top, 16)
-                        
-                        Spacer()
-                    }
-                }
-            }
-            .navigationTitle("Favorite Routes")
-        }
-    }
-}
+     var body: some View {
+       NavigationStack {
+         ScrollView {
+           VStack(alignment: .leading, spacing: 16) {
+             Text("Your Favorites")
+               .font(.title2)
+               .fontWeight(.semibold)
+               .padding(.horizontal)
 
-struct FavoritesView_Previews: PreviewProvider {
-    static var previews: some View {
-        FavoritesView(
-          favoriteRouteIDs: .constant([12, 1]),
-          stops: stops
-        )
-        .preferredColorScheme(.dark)
-    }
-}
+             ForEach(favoriteRoutes, id: \.1.id) { pair in
+               NavigationLink(value: pair.route) {
+                 FavoriteCard(
+                   parentStop: pair.stop,
+                   route: pair.route,
+                   onRemove:   { favoriteRouteIDs.remove(pair.route.id) }
+                 )
+                 .padding(.horizontal)
+               }
+             }
+           }
+           .padding(.vertical)
+         }
+         .navigationTitle("Favorites")
+         .navigationDestination(for: Route.self) { route in
+           let stop = stops.first { $0.routeList.contains { $0.id == route.id } }!
+           RouteDetailView(parentStop: stop, route: route)
+         }
+       }
+     }
+   }
