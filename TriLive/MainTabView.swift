@@ -7,12 +7,15 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             
-            HomeView(favoriteRouteIDs: $favoriteRouteIDs)
-                .tabItem {
-                    Image(systemName: "bus.fill")
-                    Text("Home")
-                }
-                .tag(Tab.home)
+            NavigationStack {
+                HomeView(favoriteRouteIDs: $favoriteRouteIDs)
+                    .navigationDestination(for: Route.self) { route in
+                        let stop = stops.first {$0.routeList.contains { $0.id == route.id}}!
+                        RouteDetailView(parentStop: stop, route: route)
+                    }
+            }
+            .tabItem { Label("Home", systemImage: "bus.fill") }
+            .tag(Tab.home)
             
             FavoritesView(
                 favoriteRouteIDs: $favoriteRouteIDs,

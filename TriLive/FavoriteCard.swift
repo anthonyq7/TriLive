@@ -14,7 +14,7 @@ struct FavoriteCard: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            //the route badge
+            // Route badge
             Text(route.isMAX ? "MAX" : "\(route.id)")
                 .font(.headline)
                 .foregroundColor(.white)
@@ -22,23 +22,22 @@ struct FavoriteCard: View {
                 .background(route.isMAX ? Color.blue : Color.green)
                 .clipShape(Circle())
 
-            //the route name
+            // Route name
             Text(route.name)
                 .font(.body)
                 .foregroundColor(.white)
                 .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
 
-            //stop info
+            // Stop info
             Text("Stop \(parentStop.id)")
                 .font(.subheadline)
                 .foregroundColor(.white)
 
             Spacer()
 
-            //remove favorite button
+            // Remove favorite button
             Button(action: onRemove) {
                 Image(systemName: "star.fill")
                     .font(.title2)
@@ -46,7 +45,7 @@ struct FavoriteCard: View {
             }
         }
         .padding()
-        .background(Color.black)
+        .background(Color.primary.opacity(0.1))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white, lineWidth: 2)
@@ -55,11 +54,15 @@ struct FavoriteCard: View {
     }
 }
 
-
 #Preview {
-    FavoriteCard(
-        parentStop: dummyStop1,
-        route: dummyRoutes1[0],
-        onRemove: { }
+    RouteCard(
+        parentStop: stops[0],
+        line:       stops[0].routeList[2],
+        isSelected: false,
+        onTap:      {},
+        isFavorited:false,
+        toggleFavorite: {}
     )
+    .padding()
+    .preferredColorScheme(.dark)
 }

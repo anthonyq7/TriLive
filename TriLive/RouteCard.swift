@@ -5,7 +5,7 @@
 //  Created by Anthony Qin on 6/16/25.
 //
 
-import SwiftUI
+
 
 
 /*
@@ -15,11 +15,7 @@ import SwiftUI
  ]
  */
 
-let dummyStop1 = Stop(
-    id: 258,
-    name: "Hawthorne & 12th",
-    routeList: dummyRoutes1
-)
+import SwiftUI
 
 struct RouteCard: View {
     let parentStop: Stop
@@ -44,22 +40,15 @@ struct RouteCard: View {
                     .foregroundColor(.white)
                     .lineLimit(2)
                 
-                
                 Text(line.direction)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white)
                     .lineLimit(1)
             }
             .layoutPriority(1)
             
             Spacer()
             
-            //Text(line.formattedMinutesRemaining)
-            //.padding(.horizontal)
-            //.foregroundStyle(.tint) //eventually make this time into currentTime - realTime so that it displays the minutes remaining but this shall suffice for now
-            
-            Spacer()
-            //Create Favorite Button
             VStack(alignment: .trailing, spacing: 4) {
                 Text(line.formattedMinutesRemaining)
                     .font(.title3)
@@ -67,28 +56,27 @@ struct RouteCard: View {
                     .lineLimit(1)
                 
                 Button(action: toggleFavorite) {
-                    Image(systemName: isFavorited ? "star.fill" : "star")
-                        .foregroundColor(isFavorited ? .yellow : .secondary)
+                          Image(systemName: isFavorited ? "star.fill" : "star")
+                            .foregroundColor(isFavorited ? .yellow : .secondary)
                 }
-
+                .buttonStyle(.plain)
             }
             .frame(minWidth: 80, alignment: .topTrailing)
         }
         .padding()
-        .background(isSelected ? Color.green.opacity(0.2) : Color.black)
+        .background(isSelected ? Color.green.opacity(0.2) : Color(.black))
         .cornerRadius(12)
         .shadow(radius: isSelected ? 4 : 1)
         .onTapGesture(perform: onTap)
     }
 }
 
-
-
 struct RouteCard_Previews: PreviewProvider {
     static var previews: some View {
+        //using the first stop and its third route as sample
         RouteCard(
-            parentStop: dummyStop1,
-            line: dummyRoutes1[2],
+            parentStop: stops[0],
+            line: stops[0].routeList[2],
             isSelected: false,
             onTap: {},
             isFavorited: false,
@@ -96,33 +84,5 @@ struct RouteCard_Previews: PreviewProvider {
         )
         .padding()
         .previewLayout(.sizeThatFits)
-        .preferredColorScheme(.dark)
     }
 }
-
-func timeConverter(time: Int) -> String { //Converts time from hrmin to hr:min
-    
-    var hour: Int {
-        let temp = time/100
-        
-        if temp > 12{
-            return temp - 12
-        } else {
-            return temp
-        }
-        
-    }
-    
-    var minute: String {
-        
-        if time%100 < 10 {
-            return "0" + String(time%100)
-        } else {
-            return String(time%100)
-        }
-        
-    }
-    
-    return String(hour) + ":" + String(minute)
-}
-
