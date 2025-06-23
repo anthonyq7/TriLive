@@ -31,44 +31,46 @@ struct RouteCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-                Text(line.isMAX ? "MAX" : "\(line.id)")
+            Text(line.isMAX ? "MAX" : "\(line.id)")
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(12)
+                .background(line.isMAX ? Color.blue : Color.green)
+                .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(line.name)
                     .font(.headline)
                     .foregroundColor(.white)
-                    .padding(12)
-                    .background(line.isMAX ? Color.blue : Color.green)
-                    .clipShape(Circle())
-                    
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(line.name)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        
-                    
-                    Text(line.direction)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                }
-                .layoutPriority(1)
+                    .lineLimit(2)
                 
-                Spacer()
                 
-                //Text(line.formattedMinutesRemaining)
-                    //.padding(.horizontal)
-                    //.foregroundStyle(.tint) //eventually make this time into currentTime - realTime so that it displays the minutes remaining but this shall suffice for now
-                
-                Spacer()
-                //Create Favorite Button
+                Text(line.direction)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+            }
+            .layoutPriority(1)
+            
+            Spacer()
+            
+            //Text(line.formattedMinutesRemaining)
+            //.padding(.horizontal)
+            //.foregroundStyle(.tint) //eventually make this time into currentTime - realTime so that it displays the minutes remaining but this shall suffice for now
+            
+            Spacer()
+            //Create Favorite Button
             VStack(alignment: .trailing, spacing: 4) {
                 Text(line.formattedMinutesRemaining)
                     .font(.title3)
                     .foregroundColor(.green)
                     .lineLimit(1)
+                
                 Button(action: toggleFavorite) {
                     Image(systemName: isFavorited ? "star.fill" : "star")
                         .foregroundColor(isFavorited ? .yellow : .secondary)
                 }
+
             }
             .frame(minWidth: 80, alignment: .topTrailing)
         }
@@ -77,50 +79,50 @@ struct RouteCard: View {
         .cornerRadius(12)
         .shadow(radius: isSelected ? 4 : 1)
         .onTapGesture(perform: onTap)
-   }
+    }
 }
 
+
+
+struct RouteCard_Previews: PreviewProvider {
+    static var previews: some View {
+        RouteCard(
+            parentStop: dummyStop1,
+            line: dummyRoutes1[2],
+            isSelected: false,
+            onTap: {},
+            isFavorited: false,
+            toggleFavorite: {}
+        )
+        .padding()
+        .previewLayout(.sizeThatFits)
+        .preferredColorScheme(.dark)
+    }
+}
+
+func timeConverter(time: Int) -> String { //Converts time from hrmin to hr:min
     
-    
-    struct RouteCard_Previews: PreviewProvider {
-        static var previews: some View {
-                RouteCard(
-                    parentStop: dummyStop1,
-                    line: dummyRoutes1[2],
-                    isSelected: false,
-                    onTap: {},
-                    isFavorited: false,
-                    toggleFavorite: {}
-                )
-                .padding()
-                .previewLayout(.sizeThatFits)
-                .preferredColorScheme(.dark)
-            }
+    var hour: Int {
+        let temp = time/100
+        
+        if temp > 12{
+            return temp - 12
+        } else {
+            return temp
         }
         
-        func timeConverter(time: Int) -> String { //Converts time from hrmin to hr:min
-            
-            var hour: Int {
-                let temp = time/100
-                
-                if temp > 12{
-                    return temp - 12
-                } else {
-                    return temp
-                }
-                
-            }
-            
-            var minute: String {
-                
-                if time%100 < 10 {
-                    return "0" + String(time%100)
-                } else {
-                    return String(time%100)
-                }
-                
-            }
-            
-            return String(hour) + ":" + String(minute)
-        }
+    }
     
+    var minute: String {
+        
+        if time%100 < 10 {
+            return "0" + String(time%100)
+        } else {
+            return String(time%100)
+        }
+        
+    }
+    
+    return String(hour) + ":" + String(minute)
+}
+

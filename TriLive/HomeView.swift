@@ -82,14 +82,20 @@ struct HomeView: View {
                 .padding(.horizontal, 24)
             
             let upcoming = selectedStop.routeList
-                .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival }
+                .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival && $0.minutesUntilArrival < 60 }
             
             ForEach(upcoming) { route in
                 RouteCard(
                     parentStop:  selectedStop,
                     line:        route,
                     isSelected:  route.id == selectedRouteID,
-                    onTap:       { selectedRouteID = route.id },
+                    onTap:       {
+                        if route.id == selectedRouteID {
+                            selectedRouteID = nil
+                        } else {
+                            selectedRouteID = route.id
+                        }
+                    },
                     isFavorited: favoriteRouteIDs.contains(route.id),
                     toggleFavorite: {
                         if favoriteRouteIDs.contains(route.id) {
@@ -106,11 +112,12 @@ struct HomeView: View {
     
     var body: some View {
         ZStack{
+            
             Color.appBackground
                 .ignoresSafeArea()
             
-            ScrollView {
-                VStack(spacing: 24) {
+            ScrollView (showsIndicators: false) {
+                VStack(spacing: 16) {
                     ExtractedLogoAndWelcomeView()
                     //Peep below for extracted structure of searchBar
                     searchBar(
@@ -119,24 +126,19 @@ struct HomeView: View {
                         selectedStop: $selectedStop,
                         stopList:     filteredStops
                     )
-                    
-                    if !favoriteRouteIDs.isEmpty {
+                    if !stopSelected {
                         favoritesSection
                     }
                     
                     if stopSelected {
                         availableSection
                     }
-                    
-                    Spacer()
                 }
-                .padding(.top, 24)
-                .background(Color.appBackground)
             }
         }
     }
 }
-    
+
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         //will put the actual favorite routes saved
@@ -151,90 +153,97 @@ struct searchBar: View {
     @Binding var searchQuery: String
     @Binding var stopSelected: Bool
     @Binding var selectedStop: Stop
-    
-    
-    
     var stopList: [Stop]
     
     var body: some View {
-        LazyVStack (spacing: 0) { //spacing 0 so that the stop list is seamless
+        VStack(spacing: 0) { //spacing 0 so that the stop list is seamless
             
             HStack{ //This is the textfield and icon area
-                
                 
                 TextField("Enter a stop", text: $searchQuery)
                     .submitLabel(.search)
                     .onSubmit { performSearch() }
-                
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundStyle(Color.appBackground)
+                    .foregroundStyle(Color.black)
                     .autocapitalization(.none)
                     .autocorrectionDisabled(true)
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.white)
-                    .cornerRadius(22)
-                    .padding(.horizontal, 24)
+                
                 
                 
                 Image(systemName: "magnifyingglass")
-                    .padding(.trailing, 24)
-                    .padding(.trailing, 16)
                     .onTapGesture { performSearch() }
+                    .foregroundStyle(Color.black)
             }
-            
-        }
-        
-        .onChange(of: searchQuery) {
-            if searchQuery.isEmpty {
-                selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
-                stopSelected = false
-            }
-        } //used some rectangles and outlines to shape it
-        
-        //Below is the logic of the result list
-        if !searchQuery.isEmpty && !stopSelected{
-            ScrollView {
-                LazyVStack{ //allows for only a set number of stops to be rendered
-                    HStack {
-                        Text("Use Current Location")
-                        
-                        Spacer()
-                        
-                        Image(systemName: "location.fill")
-                    }
-                    .padding(12)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.black) //Need to add .onTapGesture
-                    
-                    ForEach(stopList) { stop in
-                        Text(stop.name + " (Stop " + stop.id.description + ")")
-                            .padding(12)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.black)
-                            .onTapGesture {
-                                searchQuery = stop.name
-                                selectedStop = stop
-                                stopSelected = true
-                            }
-                        
-                        Divider() //gives those partitions
-                    }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray)
+                    .stroke(Color.black)
+            )
+            .padding(.horizontal, 24)
+            .onChange(of: searchQuery) {
+                if searchQuery.isEmpty {
+                    selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
+                    stopSelected = false
                 }
             }
-            .frame(maxHeight: 150)
-            .background(Color.white)
-            .cornerRadius(8)
-            .padding(.horizontal, 24)
-            .foregroundColor(.primary)
+            
+            //Below is the logic of the result list
+            if !searchQuery.isEmpty && !stopSelected{
+                ScrollView {
+                    LazyVStack{ //allows for only a set number of stops to be rendered
+                        
+                        HStack {
+                            Text("Use Current Location")
+                                .foregroundStyle(Color.black)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "location.fill")
+                                .foregroundColor(.black)
+                        }
+                        .padding(12)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white) //Need to add .onTapGesture
+                        
+                        Divider()
+                            .background(Color.gray.opacity(0.6))
+                        
+                        ForEach(stopList) { stop in
+                            Text(stop.name + " (Stop " + stop.id.description + ")")
+                                .padding(12)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(Color.black)
+                                .background(Color.white)
+                                .onTapGesture {
+                                    searchQuery = stop.name
+                                    selectedStop = stop
+                                    stopSelected = true
+                                }
+                            
+                            Divider()
+                                .background(Color.gray.opacity(0.6))//gives those partitions
+                        }
+                    }
+                }
+                .frame(maxHeight: 150)
+                .background(Color.white)
+                .cornerRadius(8)
+                .padding(.horizontal, 24)
+                .zIndex(2)
+            }
         }
     }
+    
     private func performSearch() {
         if let match = stopList.first(where: {
             $0.name.lowercased().hasPrefix(searchQuery.lowercased())
@@ -257,9 +266,11 @@ struct ExtractedLogoAndWelcomeView: View { //MUST PLACE IN VSTACK
                 .padding(.top, 25)
             
             HStack{
+                
                 Text("Welcome!") //This is the header
                     .font(.system(size: 38, weight: .medium))
                     .foregroundColor(.white)
+                    .padding(.leading, 16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Spacer()
