@@ -28,27 +28,34 @@ struct FavoritesView: View {
 
     var body: some View {
         NavigationView {
-            List {
-              ForEach(favoriteRoutes) { route in
-   
-                let parent = stops.first {
-                  $0.routeList.contains { $0.id == route.id }
-                }!
-
-                FavoriteCard(
-                  parentStop: parent,
-                  route:      route
-                ) {
-            
-                  favoriteRouteIDs.remove(route.id)
+            ZStack {
+                
+                Color.appBackground.edgesIgnoringSafeArea(.all)
+                
+                ScrollView {
+                    LazyVStack {
+                
+                        ForEach(favoriteRoutes) { route in
+                            
+                            let parent = stops.first {
+                                $0.routeList.contains { $0.id == route.id }
+                            }!
+                            
+                            FavoriteCard(
+                                parentStop: parent,
+                                route:      route,
+                                onRemove: {favoriteRouteIDs.remove(route.id)}
+                            )
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
+                            .padding(.horizontal, 16)
+                        }
+                        .padding(.top, 16)
+                        
+                        Spacer()
+                    }
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-                .padding(.vertical, 8)
-              }
             }
-            .listStyle(PlainListStyle())
-            .background(Color.appBackground)
             .navigationTitle("Favorite Routes")
         }
     }
