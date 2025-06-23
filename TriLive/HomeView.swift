@@ -126,10 +126,6 @@ struct HomeView: View {
                         selectedStop: $selectedStop,
                         stopList:     filteredStops
                     )
-                    if !stopSelected {
-                        favoritesSection
-                    }
-                    
                     if stopSelected {
                         availableSection
                     }
