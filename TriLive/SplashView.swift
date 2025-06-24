@@ -27,6 +27,7 @@ struct SplashView: View {
             if self.isActive {
                 MainTabView()
                     .transition(.scale)
+                    .preferredColorScheme(.dark)
             } else {
                 SplashScreen()
                     .onAppear {

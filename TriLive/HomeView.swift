@@ -8,18 +8,43 @@
 import SwiftUI
 import UIKit
 import Foundation
+import CoreLocation
+
+//Location Manager
+class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    
+    @Published var location: CLLocationCoordinate2D?
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.requestWhenInUseAuthorization()
+        manager.startUpdatingLocation()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]){
+        location = locations.first?.coordinate
+    }
+}
 
 //START OF HomeView
-struct HomeView_Previews: PreviewProvider {
-  @State static private var previewFavorites: Set<Int> = []
-  static var previews: some View {
-    HomeView(favoriteRouteIDs: $previewFavorites)
-  }
-}
+/*
+ struct HomeView_Previews: PreviewProvider {
+ @State static private var previewFavorites: Set<Int> = []
+ @State static private var previewNavigationPath = NavigationPath()
+ static var previews: some View {
+ HomeView(favoriteRouteIDs: $previewFavorites, navigationPath: $previewNavigationPath)
+ }
+ }*/
 
 
 struct HomeView: View {
     @Binding var favoriteRouteIDs: Set<Int>
+    @ObservedObject var locationManager: LocationManager //for location
+    @ObservedObject var timeManager: TimeManager //for progress bar to track time elapsed
+    @FocusState private var isTextFieldFocused: Bool //if text field is clicked, then search results show up.
     
     @State private var searchQuery: String = ""
     @State private var stopSelected: Bool = false
@@ -27,7 +52,7 @@ struct HomeView: View {
     @State private var selectedRouteID: Int? = nil
     //for the selected route popping out
     @State private var focusedRoute: Route? = nil
-    @State private var navigationPath = NavigationPath()
+    @Binding var navigationPath: NavigationPath
     
     @State var selectedStop: Stop = Stop(id: 0, name: "Placeholder", routeList: [])
     @State var selectedRoute: Route = Route(id: 0, name: "Placeholder", arrivalTime: 0, direction: "Placeholder", realTime: 0, isMAX: false)
@@ -46,6 +71,7 @@ struct HomeView: View {
     private func startTracking(_ route: Route){
         navigationPath.append(route)
         print("Now starting route:", route.name)
+        timeManager.startTime()
     }
     
     //cancels the blur and goes back to the home view
@@ -140,7 +166,8 @@ struct HomeView: View {
                 .padding(.horizontal, 24)
             
             let upcoming = selectedStop.routeList
-                .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival && $0.minutesUntilArrival < 60 }
+                .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival}
+            //.filter { $0.minutesUntilArrival < 180 }
             
             ForEach(upcoming) { route in
                 NavigationLink(value: route){
@@ -169,28 +196,35 @@ struct HomeView: View {
             ZStack{
                 Color.appBackground
                     .ignoresSafeArea()
+                    .onTapGesture {
+                        isTextFieldFocused = false
+                    }
                 
                 ScrollView (showsIndicators: false) {
                     VStack(spacing: 24) {
                         ExtractedLogoAndWelcomeView()
                         //Peep below for extracted structure of searchBar
                         searchBar(
+                            locationManager: locationManager,
                             searchQuery:  $searchQuery,
                             stopSelected: $stopSelected,
                             selectedStop: $selectedStop,
-                            stopList:     filteredStops
+                            stopList:     filteredStops,
+                            isTextFieldFocused: $isTextFieldFocused
                         )
+                        
                         if stopSelected {
                             availableSection
+                                .opacity(isTextFieldFocused ? 0.3 : 1)
+                                .allowsHitTesting(!isTextFieldFocused)
+                                .blur(radius: isTextFieldFocused ? 5 : 0)
                         }
                     }
                     .padding(.top, 24)
                 }
-                .background(Color.appBackground.ignoresSafeArea())
-                
                 .navigationDestination(for: Route.self) { route in
                     let stop = stops.first { $0.routeList.contains(route) }!
-                    RouteDetailView(parentStop: stop, route: route)
+                    RouteDetailView(parentStop: stop, route: route, navPath: $navigationPath, timeManager: timeManager)
                 }
                 //when the route card is picked and focused on, it calls blurOverlay and focuses on the selected route
                 if let focused = focusedRoute{
@@ -205,16 +239,19 @@ struct HomeView: View {
     
     
     struct searchBar: View {
+        @ObservedObject var locationManager: LocationManager
         @Binding var searchQuery: String
         @Binding var stopSelected: Bool
         @Binding var selectedStop: Stop
         var stopList: [Stop]
+        @FocusState.Binding var isTextFieldFocused: Bool
         
         var body: some View {
             VStack(spacing: 0) { //spacing 0 so that the stop list is seamless
                 HStack{ //This is the textfield and icon area
                     
                     TextField("Enter a stop", text: $searchQuery)
+                        .focused($isTextFieldFocused)
                         .submitLabel(.search)
                         .onSubmit { performSearch() }
                         .lineLimit(1)
@@ -240,8 +277,14 @@ struct HomeView: View {
                         .stroke(Color.black)
                 )
                 .padding(.horizontal, 24)
-                .onChange(of: searchQuery) {
+                .onChange(of: isTextFieldFocused) {
                     if searchQuery.isEmpty {
+                        selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
+                        stopSelected = false
+                    }
+                }
+                .onChange(of: searchQuery) {
+                    if searchQuery != selectedStop.name{
                         selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
                         stopSelected = false
                     }
@@ -249,10 +292,12 @@ struct HomeView: View {
                 
                 
                 
+                
+                
                 //Below is the logic of the result list
-                if !searchQuery.isEmpty && !stopSelected{
-                    ScrollView {
-                        LazyVStack{ //allows for only a set number of stops to be rendered
+                if (!searchQuery.isEmpty && !stopSelected) || isTextFieldFocused{
+                    ScrollView (showsIndicators: false) {
+                        LazyVStack (spacing: 0){ //allows for only a set number of stops to be rendered
                             
                             HStack {
                                 Text("Use Current Location")
@@ -267,7 +312,16 @@ struct HomeView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.white)) //Need to add .onTapGesture
+                            .background(Color(.white))
+                            .onTapGesture {
+                                
+                                isTextFieldFocused = false
+                                
+                                if let location = locationManager.location {
+                                    //Use coordinates to find closest stop
+                                    //Then, set the stop
+                                }
+                            }
                             
                             Divider()
                                 .background(Color.gray.opacity(0.6))
@@ -281,6 +335,7 @@ struct HomeView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.white)
                                     .onTapGesture {
+                                        isTextFieldFocused = false
                                         searchQuery = stop.name
                                         selectedStop = stop
                                         stopSelected = true

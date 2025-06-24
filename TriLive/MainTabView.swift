@@ -1,31 +1,42 @@
 import SwiftUI
+import Combine
+import CoreLocation
 
 struct MainTabView: View {
     @State private var selectedTab = Tab.home
     @State private var favoriteRouteIDs = Set<Int>()
+    @State private var navigationPath = NavigationPath()
+    @State private var activitiyStarted: Bool = false
+    @State private var locationManager = LocationManager()
+    @StateObject var timeManager = TimeManager()
     
     var body: some View {
         TabView(selection: $selectedTab) {
             
             NavigationStack {
-                HomeView(favoriteRouteIDs: $favoriteRouteIDs)
+                HomeView(favoriteRouteIDs: $favoriteRouteIDs, locationManager: locationManager, timeManager: timeManager, navigationPath: $navigationPath)
                     .navigationDestination(for: Route.self) { route in
                         let stop = stops.first {$0.routeList.contains { $0.id == route.id}}!
-                        RouteDetailView(parentStop: stop, route: route)
+                        
+                        RouteDetailView(parentStop: stop, route: route, navPath: $navigationPath, timeManager: timeManager)
                     }
             }
             .tabItem { Label("Home", systemImage: "bus.fill") }
             .tag(Tab.home)
+            .preferredColorScheme(.dark)
             
             FavoritesView(
                 favoriteRouteIDs: $favoriteRouteIDs,
-                stops: stops
+                navPath: $navigationPath,
+                stops: stops,
+                timeManager: timeManager
             )
             .tabItem {
                 Image(systemName: "star.fill")
                 Text("Favorites")
             }
             .tag(Tab.favorites)
+            .preferredColorScheme(.dark)
             
             SettingsView()
                 .tabItem {
@@ -33,6 +44,7 @@ struct MainTabView: View {
                     Text("Settings")
                 }
                 .tag(Tab.settings)
+                .preferredColorScheme(.dark)
         }
     }
 }
