@@ -1,0 +1,14 @@
+*.xcworkspace
+*.xcuserdata
+ios-app/DerivedData/        
+build/
+*.ipa
+*.dSYM
+.swiftpm/
+.build/
+backend/.venv/
+backend/__pycache__/
+*.py[cod]
+backend/.pytest_cache/
+.DS_Store
+Thumbs.db
