@@ -212,6 +212,9 @@ struct HomeView: View {
                             
                             if stopSelected && !isTextFieldFocused {
                                     availableSection
+                            } else if stopSelected && isTextFieldFocused{
+                                availableSection
+                                    .hidden()
                             }
                         
                         }
