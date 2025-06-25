@@ -2,10 +2,33 @@ from fastapi import FastAPI
 from redis.asyncio import Redis # type: ignore
 from pydantic import BaseModel
 from typing import Optional
+
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session # type: ignore
+from typing import List
+
+from database import SessionLocal, engine
+from models import StationModel
+from schemas import Station
+
+import models
 import os, json
 
 app = FastAPI()
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+
+#creates the tables defined in models.py
+models.Base.metadata.create_all(bind=engine)
+
+#this is a dependency that gives you a database session in each request
+#it opens a session, tells fastapi to put it into the route and them closes when the request is done
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 @app.on_event("startup")
 async def open_redis():
@@ -37,31 +60,70 @@ class Station(BaseModel):
 stations = []
 
 #this creates the station endpoints
-@app.post("/stations")
-async def create_station(station: Station):
-    stations.append(station)
-    return station
+@app.post("/stations", response_model=Station)
+def create_station(station: Station, db: Session = Depends(get_db)):
+
+    #this converts the incoming pydantic station into a sqlalchemy model
+    db_station = StationModel(**station.dict())
+
+    #adds it to the db station
+    db.add(db_station)
+    db.commit()
+    db.refresh(db_station)
+
+    return db_station
+
+
+
 
 #gets all stations
-@app.get("/stations")
-async def get_stations():
-    return stations
+@app.get("/stations", response_model=List[Station])
+def get_stations(db: Session = Depends(get_db)):
+
+    #it queries all the station rows and returns them
+    return db.query(StationModel).all()
 
 #gets a specific station by the station id
-@app.put("/stations/{id}")
-async def update_station(id: int, updated_station: Station):
-    for i, station in enumerate(stations):
-        if station.id == id:
-            stations[i] = updated_station
-            return updated_station
-    raise HTTPException(status_code=404, detail="Station not found")
+@app.get("/stations/{id}", response_model=Station)
+def get_station(id: int, db: Session = Depends(get_db)):
+    station = db.query(StationModel).filter(StationModel.id == id).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    return station
+
+
+#updates a specific station by the station id
+@app.put("/stations/{id}", response_model=Station)
+def update_station(id: int, updated: Station, db: Session = Depends(get_db)):
+    station = db.query(StationModel).filter(StationModel.id == id).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    #overwrite the values of the current station and updates the values
+    for key, value in updated.model_dump().items():
+        setattr(station, key, value)
+
+    db.commit()
+    db.refresh(station)
+    return station
+
+
+
+
 
 #deletes a station basically removing it from the results
 @app.delete("/stations/{id}")
-async def delete_station(id: int):
-    for i, station in enumerate(stations):
-        if station.id == id:
-            deleted = stations.pop(i)
-            return {"message": "Station deleted", "station": deleted}
-    raise HTTPException(status_code=404, detail="Station not found")
+def delete_station(id: int, db: Session = Depends(get_db)):
+    station = db.query(StationModel).filter(StationModel.id == id).first()
+
+    if not station:
+        raise HTTPException(status_code=404, detail="Station not found")
+
+    db.delete(station)
+    db.commit()
+
+    return {"message": "Station deleted"}
 
