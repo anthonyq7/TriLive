@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float # type: ignore
-from database import Base
+from backend.app.db.database import Base
 
 #this is the station table schema in the database, name, id and the other fields
 class StationModel(Base):
