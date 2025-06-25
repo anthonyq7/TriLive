@@ -107,7 +107,7 @@ struct HomeView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(16)
                 .shadow(radius: 20)
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 12)
                 
                 //to start the route
                 Text("Tap the card again to start")
@@ -185,7 +185,7 @@ struct HomeView: View {
                             }
                         }
                     )
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 12)
                 }
             }
         }
@@ -196,35 +196,36 @@ struct HomeView: View {
             ZStack{
                 Color.appBackground
                     .ignoresSafeArea()
-                    .onTapGesture {
-                        isTextFieldFocused = false
-                    }
                 
                 ScrollView (showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        ExtractedLogoAndWelcomeView()
-                        //Peep below for extracted structure of searchBar
-                        searchBar(
-                            locationManager: locationManager,
-                            searchQuery:  $searchQuery,
-                            stopSelected: $stopSelected,
-                            selectedStop: $selectedStop,
-                            stopList:     filteredStops,
-                            isTextFieldFocused: $isTextFieldFocused
-                        )
+                        VStack(spacing: 24) {
+                            ExtractedLogoAndWelcomeView()
+                            //Peep below for extracted structure of searchBar
+                            searchBar(
+                                locationManager: locationManager,
+                                searchQuery:  $searchQuery,
+                                stopSelected: $stopSelected,
+                                selectedStop: $selectedStop,
+                                stopList:     filteredStops,
+                                isTextFieldFocused: $isTextFieldFocused
+                            )
+                            
+                            if stopSelected && !isTextFieldFocused {
+                                    availableSection
+                            }
                         
-                        if stopSelected {
-                            availableSection
-                                .opacity(isTextFieldFocused ? 0.3 : 1)
-                                .allowsHitTesting(!isTextFieldFocused)
-                                .blur(radius: isTextFieldFocused ? 5 : 0)
                         }
+                        .padding(.top, 24)
+                }
+                .onTapGesture {
+                    withAnimation(.easeIn(duration: 0.15)) {
+                        isTextFieldFocused = false
                     }
-                    .padding(.top, 24)
                 }
                 .navigationDestination(for: Route.self) { route in
                     let stop = stops.first { $0.routeList.contains(route) }!
                     RouteDetailView(parentStop: stop, route: route, navPath: $navigationPath, timeManager: timeManager)
+                    
                 }
                 //when the route card is picked and focused on, it calls blurOverlay and focuses on the selected route
                 if let focused = focusedRoute{
@@ -277,12 +278,6 @@ struct HomeView: View {
                         .stroke(Color.black)
                 )
                 .padding(.horizontal, 24)
-                .onChange(of: isTextFieldFocused) {
-                    if searchQuery.isEmpty {
-                        selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
-                        stopSelected = false
-                    }
-                }
                 .onChange(of: searchQuery) {
                     if searchQuery != selectedStop.name{
                         selectedStop = Stop(id: 0, name: "Placeholder", routeList: [])
@@ -295,7 +290,7 @@ struct HomeView: View {
                 
                 
                 //Below is the logic of the result list
-                if (!searchQuery.isEmpty && !stopSelected) || isTextFieldFocused{
+                if isTextFieldFocused{
                     ScrollView (showsIndicators: false) {
                         LazyVStack (spacing: 0){ //allows for only a set number of stops to be rendered
                             
@@ -315,7 +310,9 @@ struct HomeView: View {
                             .background(Color(.white))
                             .onTapGesture {
                                 
-                                isTextFieldFocused = false
+                                withAnimation(.easeIn(duration: 0.15)) {
+                                    isTextFieldFocused = false
+                                }
                                 
                                 if let location = locationManager.location {
                                     //Use coordinates to find closest stop
@@ -335,10 +332,12 @@ struct HomeView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.white)
                                     .onTapGesture {
-                                        isTextFieldFocused = false
                                         searchQuery = stop.name
                                         selectedStop = stop
-                                        stopSelected = true
+                                        withAnimation (.easeIn(duration: 0.15)) {
+                                            stopSelected = true
+                                            isTextFieldFocused = false
+                                        }
                                     }
                                 
                                 Divider()
@@ -346,7 +345,7 @@ struct HomeView: View {
                             }
                         }
                     }
-                    .frame(maxHeight: 150)
+                    .frame(maxHeight: 250)
                     .cornerRadius(8)
                     .padding(.horizontal, 24)
                     .zIndex(2)

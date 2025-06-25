@@ -28,22 +28,28 @@ struct RouteCard: View {
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             Text(line.isMAX ? "MAX" : "\(line.id)")
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .font(.headline)
                 .foregroundColor(.white)
-                .padding(12)
+                .padding(10)
                 .background(line.isMAX ? Color.blue : Color.green)
                 .clipShape(Circle())
+                .scaledToFill()
+                .frame(width: 54, height: 54)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(line.name)
                     .font(.headline)
                     .foregroundColor(.white)
-                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.leading)
                 
                 Text(line.direction)
                     .font(.subheadline)
                     .foregroundColor(.white)
-                    .lineLimit(1)
+                    .minimumScaleFactor(0.95)
+                    .multilineTextAlignment(.leading)
             }
             .layoutPriority(1)
             
@@ -51,9 +57,10 @@ struct RouteCard: View {
             
             VStack(alignment: .trailing, spacing: 4) {
                 Text(line.formattedMinutesRemaining)
-                    .font(.title3)
+                    .font(.headline)
                     .foregroundColor(.green)
                     .lineLimit(1)
+                    .frame(width: 80)
                 
                 Button(action: toggleFavorite) {
                           Image(systemName: isFavorited ? "star.fill" : "star")
@@ -82,7 +89,6 @@ struct RouteCard_Previews: PreviewProvider {
             isFavorited: false,
             toggleFavorite: {}
         )
-        .padding()
-        .previewLayout(.sizeThatFits)
     }
 }
+

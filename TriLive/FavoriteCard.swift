@@ -13,37 +13,56 @@ struct FavoriteCard: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             // Route badge
             Text(route.isMAX ? "MAX" : "\(route.id)")
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .font(.headline)
                 .foregroundColor(.white)
                 .padding(10)
                 .background(route.isMAX ? Color.blue : Color.green)
                 .clipShape(Circle())
-
+                .scaledToFill()
+                .frame(width: 54, height: 54)
+            
             // Route name
-            Text(route.name)
-                .font(.body)
-                .foregroundColor(.white)
-                .lineLimit(2)
-
-            Spacer()
-
-            // Stop info
-            Text("Stop \(parentStop.id)")
-                .font(.subheadline)
-                .foregroundColor(.white)
-
-            Spacer()
-
-            // Remove favorite button
-            Button(action: onRemove) {
-                Image(systemName: "star.fill")
-                    .font(.title2)
-                    .foregroundColor(.yellow)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(route.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.leading)
+                
+                Text(route.direction)
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .minimumScaleFactor(0.95)
+                    .multilineTextAlignment(.leading)
             }
+            .layoutPriority(1)
+            
+            Spacer()
+            
+            // Stop info
+            VStack(alignment: .trailing, spacing: 12){
+                Text("Stop \(parentStop.id)")
+                    .font(.subheadline)
+                    .lineLimit(1)
+                    .foregroundColor(.white)
+                    .frame(width: 65)
+                    
+                
+                // Remove favorite button
+                Button(action: onRemove) {
+                    Image(systemName: "star.fill")
+                        .font(.title2)
+                        .foregroundColor(.yellow)
+                }
+            }
+            .padding()
         }
+        .frame(maxWidth: .infinity)
         .padding()
         .background(Color.primary.opacity(0.1))
         .overlay(
@@ -51,18 +70,15 @@ struct FavoriteCard: View {
                 .stroke(Color.white, lineWidth: 2)
         )
         .cornerRadius(12)
+        
     }
 }
 
 #Preview {
-    RouteCard(
+    FavoriteCard(
         parentStop: stops[0],
-        line:       stops[0].routeList[2],
-        isSelected: false,
-        onTap:      {},
-        isFavorited:false,
-        toggleFavorite: {}
+        route: stops[0].routeList[0],
+        onRemove: {}
     )
-    .padding()
     .preferredColorScheme(.dark)
 }
