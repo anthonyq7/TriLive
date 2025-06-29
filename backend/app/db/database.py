@@ -1,14 +1,19 @@
-from sqlalchemy import create_engine # type: ignore
-from sqlalchemy.orm import declarative_base, sessionmaker # type: ignore
+# backend/app/db/database.py
+from dotenv import load_dotenv
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-#database connection in string format
-DATABASE_URL = "postgresql://postgres:portland>seattle@localhost:5432/trilive"
+load_dotenv()
 
-#sqlalchemy engine handles the actual connection to the database
-engine = create_engine(DATABASE_URL)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None or DATABASE_URL == "":
+    raise RuntimeError("DATABASE_URL must be set in environment or .env")
 
-#this is useed to establish the session between the database and the app
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-#the base class is used to define tables that inherit from it
+engine = create_engine(DATABASE_URL, echo=True)
+
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
