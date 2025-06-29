@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    image: trilive-backend
+    ports:
+      - "8000:8000"
+    environment:
+      TRIMET_API_KEY: ${TRIMET_API_KEY}
+      DATABASE_URL: postgresql://postgres:password@db:5432/trilive
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: trilive
+
+  redis:
+    image: redis:7
