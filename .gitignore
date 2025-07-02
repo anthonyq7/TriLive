@@ -12,4 +12,4 @@ backend/__pycache__/
 backend/.pytest_cache/
 .DS_Store
 Thumbs.db
-.env/
+.env
