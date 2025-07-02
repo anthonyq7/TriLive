@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   web:
     build: .
@@ -5,9 +6,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      TRIMET_API_KEY: ${TRIMET_API_KEY}
-      DATABASE_URL: postgresql://postgres:password@db:5432/trilive
-      REDIS_URL: redis://redis:6379
+      - TRIMET_API_KEY: ${TRIMET_API_KEY}
+      - DATABASE_URL: ${DATABASE_URL}
+      - REDIS_URL: ${REDIS_URL}
     depends_on:
       - db
       - redis
@@ -15,9 +16,11 @@ services:
   db:
     image: postgres:14
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: trilive
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: 
+      -pgdata:/var/lib/postgres/data
 
   redis:
     image: redis:7
