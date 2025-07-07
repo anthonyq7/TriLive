@@ -4,19 +4,28 @@ import Combine
 struct RouteDetailView: View {
     let parentStop: Stop
     let route: Route
-    @State private var isLiveActive = true
+
     @Binding var navPath: NavigationPath
     @ObservedObject var timeManager: TimeManager
+
     @StateObject private var stationVM = StationsViewModel()
+
+    @State private var isLiveActive = true
+
+    // compute progress ahead of time
+    private var progress: Double {
+        min(timeManager.timeDifferenceInMinutes(), Double(route.minutesUntilArrival))
+    }
 
     var body: some View {
         ZStack {
+            // background
             Color.appBackground
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
-                   
+                    // — Header —
                     VStack(alignment: .leading, spacing: 1) {
                         Text(route.name)
                             .font(.largeTitle)
@@ -29,7 +38,7 @@ struct RouteDetailView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 16)
 
-                    // stop button to exit live activity
+                    // stop button
                     Button("Stop") {
                         isLiveActive = false
                         navPath.removeLast()
@@ -43,7 +52,7 @@ struct RouteDetailView: View {
                     .cornerRadius(25)
                     .padding(.horizontal)
 
-                    // live activity section
+                    // live activity
                     if isLiveActive {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Live Activity In Progress…")
@@ -51,7 +60,7 @@ struct RouteDetailView: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
 
-                            LiveActivityCard(timeManager: timeManager, route: route)
+                            LiveActivityCard(timeManager: timeManager, route: route, progress: progress)
                         }
                         .padding(20)
                         .background(Color(.secondarySystemBackground))
@@ -60,82 +69,96 @@ struct RouteDetailView: View {
                         .padding(.vertical, 24)
                     }
 
-                    // map or station focus view
-                    if let focus = stationVM.stations.first(where: { $0.id == parentStop.id }) {
-                        StationsMapView(
-                            viewModel: stationVM,
-                            focusStation: focus
-                        )
-                        .frame(height: 200)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 24)
-                    } else {
-                        // placeholder while loading or on no match
-                        ProgressView()
+                    // map or placeholder
+                    Group {
+                        if stationVM.isLoading {
+                            ProgressView("Loading map…")
+                                .frame(height: 200)
+                        } else if stationVM.showError {
+                            VStack {
+                                Image(systemName: "exclamationmark.triangle")
+                                Text("Failed to load stations")
+                                Text(stationVM.errorMessage ?? "")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.red)
                             .frame(height: 200)
-                            .padding(.horizontal, 24)
+                        } else if let focus = stationVM.stations.first(where: { $0.id == parentStop.id }) {
+                            StationsMapView(
+                                viewModel: stationVM,
+                                focusStation: focus
+                            )
+                            .frame(height: 200)
+                            .cornerRadius(12)
+                        } else {
+                            Text("No station data available")
+                                .frame(height: 200)
+                        }
                     }
+                    .padding(.horizontal, 24)
                 }
                 .onAppear {
+                    // reset and load stations
                     stationVM.loadStations()
-                    // fetch station data when view appears
                 }
             }
+
+            // overlay full-screen spinner if desired
+            if stationVM.isLoading {
+                Color.black.opacity(0.25).ignoresSafeArea()
+            }
         }
+        // alert for map-loading errors
+        .alert("Station Load Error",
+               isPresented: $stationVM.showError,
+               actions: { Button("OK", role: .cancel) {} },
+               message: { Text(stationVM.errorMessage ?? "Unknown error") }
+        )
         .navigationTitle("Route Details")
-        // set nav bar title
-        
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
     }
+}
 
+struct LiveActivityCard: View {
+    @ObservedObject var timeManager: TimeManager
+    let route: Route
+    let progress: Double
 
-    // nested view for live activity details
-    struct LiveActivityCard: View {
-        @ObservedObject var timeManager: TimeManager
-        // observe timer updates
-        let route: Route
-
-        var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(route.name)
-                        .font(.headline)
-                    Spacer()
-                    Text(
-                        "ETA: " +
-                        DateFormatter.localizedString(
-                            from: Date().addingTimeInterval(Double(route.minutesUntilArrival * 60)),
-                            dateStyle: .none,
-                            timeStyle: .short
-                        )
-                    )
-                    .font(.subheadline)
-                }
-
-                Text("Your ride will be here in \(route.minutesUntilArrival) min\(route.minutesUntilArrival == 1 ? "" : "s")")
-                    .font(.subheadline)
-
-                // compute progress (note: let declarations not allowed directly in ViewBuilder)
-                let progress = min(timeManager.timeDifferenceInMinutes(), Double(route.minutesUntilArrival))
-                
-                ProgressView(value: progress, total: Double(route.minutesUntilArrival))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(route.name)
+                    .font(.headline)
+                Spacer()
+                Text("ETA: " +
+                     DateFormatter.localizedString(
+                        from: Date().addingTimeInterval(Double(route.minutesUntilArrival * 60)),
+                        dateStyle: .none,
+                        timeStyle: .short
+                     )
+                )
+                .font(.subheadline)
             }
-            .padding()
-            .background(Color(.systemBackground).opacity(0.1))
-            .cornerRadius(8)
+
+            Text("Your ride will be here in \(route.minutesUntilArrival) min" +
+                 (route.minutesUntilArrival == 1 ? "" : "s")
+            )
+            .font(.subheadline)
+
+            ProgressView(value: progress, total: Double(route.minutesUntilArrival))
         }
+        .padding()
+        .background(Color(.systemBackground).opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
-// timer manager for live updates
+// TimeManager remains unchanged
+
 class TimeManager: ObservableObject {
     @Published var currentTime: Date = Date()
-    // current time published every second
-    
     let oldTime: Date
-    // timestamp when timer started
-    
     private var timer: Timer?
 
     init() {
@@ -145,9 +168,9 @@ class TimeManager: ObservableObject {
 
     func startTime() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 1,
+                                     repeats: true) { _ in
             self.currentTime = Date()
-            // update every second
         }
     }
 
@@ -162,6 +185,5 @@ class TimeManager: ObservableObject {
 
     deinit {
         timer?.invalidate()
-        // clean up timer
     }
 }

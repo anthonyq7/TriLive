@@ -1,65 +1,56 @@
-//
-//  ContentView.swift
-//  TriLive
-//
-//  Created by Anthony Qin on 6/6/25.
-//
-
 import SwiftUI
-import CoreLocation
 
 struct HomeView: View {
-    // bound set of favorited route IDs from parent view
+    // MARK: – injected from App entry‐point
     @Binding var favoriteRouteIDs: Set<Int>
-    // observed object providing location updates
     @ObservedObject var locationManager: LocationManager
-    // observed object managing timing logic for routes
     @ObservedObject var timeManager: TimeManager
-    // bound navigation path used by NavigationStack
     @Binding var navigationPath: NavigationPath
+
+    // MARK: – search & focus state
     @State private var searchQuery = ""
-    // current search text for stops
     @FocusState private var isSearchFocused: Bool
-    // tracks focus state of search field
+
+    // MARK: – view model with loading & error state
     @StateObject private var stopVM = StopViewModel()
-    // view model fetching & filtering stops
+
+    // for tap‐to‐highlight behavior
     @State private var focusedRoute: Route?
-    // track a route on first tap
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            // navigation container
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
 
+                // main scrollable content
                 ScrollView {
                     VStack(spacing: 24) {
-                        // logo and welcome header
                         ExtractedLogoAndWelcomeView()
 
-                        // search bar for entering stop names or IDs
                         SearchBar(
                             locationManager: locationManager,
                             searchQuery:     $searchQuery,
                             stopSelected:    Binding(
                                                  get: { stopVM.selectedStop != nil },
                                                  set: { _ in }
-                                               ),
+                                             ),
                             selectedStop:    $stopVM.selectedStop,
                             stopList:        stopVM.filteredStops,
                             isFocused:       $isSearchFocused
                         )
-                        .onChange(of: searchQuery) { stopVM.filter(query: $0) } // update filter on input
-                        .zIndex(1)                                             // keep overlay on top
+                        //closure so Swift knows we’re calling StopViewModel.filter(_:)
+                        .onChange(of: searchQuery) { newQuery in
+                            stopVM.filter(query: newQuery)
+                        }
+                        .zIndex(1)
 
-                        // display route cards for the selected stop
                         if let stop = stopVM.selectedStop {
                             ForEach(stop.routeList) { route in
                                 RouteCard(
                                     parentStop:    stop,
                                     line:          route,
-                                    isSelected:    (route.id == focusedRoute?.id),
+                                    isSelected:    route.id == focusedRoute?.id,
                                     onTap:         { handleTap(route) },
                                     isFavorited:   favoriteRouteIDs.contains(route.id),
                                     toggleFavorite:{ toggleFavorite(route) }
@@ -68,32 +59,37 @@ struct HomeView: View {
                             }
                         }
 
-                        Spacer()  // push content to top
+                        Spacer()
                     }
-                    .padding(.top, 24)  // spacing from top edge
+                    .padding(.top, 24)
+                }
+
+                // overlay spinner when loading
+                if stopVM.isLoading {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+
+                    ProgressView("Loading stops…")
+                        .padding(16)
+                        .background(.regularMaterial)
+                        .cornerRadius(8)
                 }
             }
-            .onAppear { stopVM.loadStops() }
-            // trigger loading when view appears
-            .navigationDestination(for: Route.self) { route in
-                // switch from guard…else+return to an if-let inside the ViewBuilder
-                if let stop = stopVM.allStops.first(where: { $0.routeList.contains(where: { $0.id == route.id }) }) {
-                    // this view will be emitted when we find the stop
-                    RouteDetailView(
-                        parentStop:  stop,
-                        route:       route,
-                        navPath:     $navigationPath,
-                        timeManager: timeManager
-                    )
-                } else {
-                    // fallback if no matching stop found
-                    EmptyView()
-                }
+            // alert on error
+            .alert(
+                "Error loading stops",
+                isPresented: $stopVM.showError,
+                actions: { Button("OK", role: .cancel) {} },
+                message: { Text(stopVM.errorMessage ?? "Unknown error") }
+            )
+            .onAppear {
+                stopVM.loadStops()
             }
         }
     }
 
-    // first tap highlights the route, second tap navigates and starts the timer
+    // MARK: – actions
+
     private func handleTap(_ route: Route) {
         if focusedRoute == nil {
             focusedRoute = route
@@ -104,7 +100,6 @@ struct HomeView: View {
         }
     }
 
-    // toggle favorite status for a route
     private func toggleFavorite(_ route: Route) {
         if favoriteRouteIDs.contains(route.id) {
             favoriteRouteIDs.remove(route.id)
@@ -113,4 +108,3 @@ struct HomeView: View {
         }
     }
 }
-
