@@ -9,42 +9,44 @@ import Foundation
 import Combine
 
 final class StopViewModel: ObservableObject {
-  @Published var allStops:    [Stop] = []
-  @Published var filteredStops:[Stop] = []
-  @Published var selectedStop: Stop?
+    @Published var allStops: [Stop] = []
+    @Published var filteredStops: [Stop] = []
+    @Published var selectedStop: Stop?
+
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+    @Published var showError: Bool = false
 
     private let stopService: StopService
-    // use dependency injection for easier testing
 
     init(service: StopService = .shared) {
-        stopService = service
+        self.stopService = service
     }
 
-    // kick off network fetch for stops
     func loadStops() {
+        errorMessage = nil
+        showError = false
+        isLoading = true
+
         stopService.fetchStops { [weak self] result in
-            // use StopService, not StationService
             DispatchQueue.main.async {
-                // ensure UI updates on the main thread
+                self?.isLoading = false
                 switch result {
                 case .success(let list):
                     self?.allStops = list
-                    // populates allStops
                     self?.filteredStops = list
-                    // resets filteredStops
-                case .failure(let err):
-                    // TODO: update UI with an error state instead of printing
-                    print("could not load stops:", err)
+                case .failure(let error):
+                    self?.errorMessage = error.localizedDescription
+                    self?.showError = true
                 }
             }
         }
     }
 
-    // updates `filteredStops` as you type
+    /// updates `filteredStops` as you type
     func filter(query: String) {
         guard !query.isEmpty else {
             filteredStops = allStops
-            // if the query is empty, show all stops again
             return
         }
         filteredStops = allStops.filter {
@@ -53,6 +55,3 @@ final class StopViewModel: ObservableObject {
         }
     }
 }
-
-
-

@@ -9,41 +9,39 @@ import Foundation
 
 class StopService {
     static let shared = StopService()
-    private let baseURL = URL(
-        string: Bundle.main
-            .object(forInfoDictionaryKey: "API_BASE_URL") as! String
-    )!
-    // base url pulled from Info.plist. forced-unwrap will crash if missing or invalid, i tried putting it in the ino.plist but idk if its right
+    
+    // safely pull from Info.plist, or crash with a clear message
+    private var baseURL: URL {
+        guard let s = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
+              let url = URL(string: s) else {
+            fatalError("🔴 API_BASE_URL is missing or invalid in Info.plist")
+        }
+        return url
+    }
 
-    // fetch list of stops from server
+    // Fetches all stops from GET /stations
     func fetchStops(completion: @escaping (Result<[Stop], Error>) -> Void) {
-        // note: using "stations" path—ensure this matches your API endpoint for stops
         let url = baseURL.appendingPathComponent("stations")
-        
-        URLSession.shared.dataTask(with: url) { data, res, err in
-            // handle transport error
-            if let err = err {
-                return completion(.failure(err))
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            // transport error
+            if let error = error {
+                return completion(.failure(error))
             }
-            
-            //ensure we received data
-            guard let data = data else {
+            // check HTTP status code
+            if let code = (response as? HTTPURLResponse)?.statusCode,
+               !(200...299).contains(code) {
                 return completion(.failure(URLError(.badServerResponse)))
             }
-        
-            
+            // missing data
+            guard let data = data else {
+                return completion(.failure(URLError(.zeroByteResource)))
+            }
             do {
-                //decode json into Stop models
                 let stops = try JSONDecoder().decode([Stop].self, from: data)
                 completion(.success(stops))
             } catch {
                 completion(.failure(error))
             }
-        }
-        .resume()
-        // start the network request
+        }.resume()
     }
 }
-
-
-
