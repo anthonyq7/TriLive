@@ -6,17 +6,9 @@
 //
 
 
-
-
-/*
- let dummyBusRoutes = [
- BusRoute(id: 12, name: "Line 12 - Barbur/Sandy Blvd", arrivalTime: 1545, direction: "Eastbound to Sandy", realTime: 1548),
- BusRoute(id: 75, name: "Line 75 - Chavez/Lombard", arrivalTime: 1550, direction: "Northbound to Lombard", realTime: 1551)
- ]
- */
-
 import SwiftUI
 
+// view representing a single route row with tap and favorite actions
 struct RouteCard: View {
     let parentStop: Stop
     let line: Route
@@ -27,6 +19,7 @@ struct RouteCard: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
+            // route badge: either "MAX" or the route id
             Text(line.isMAX ? "MAX" : "\(line.id)")
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -38,6 +31,7 @@ struct RouteCard: View {
                 .scaledToFill()
                 .frame(width: 54, height: 54)
             
+            // route name and direction
             VStack(alignment: .leading, spacing: 4) {
                 Text(line.name)
                     .font(.headline)
@@ -55,6 +49,7 @@ struct RouteCard: View {
             
             Spacer()
             
+            // time remaining and favorite button
             VStack(alignment: .trailing, spacing: 4) {
                 Text(line.formattedMinutesRemaining)
                     .font(.headline)
@@ -63,32 +58,37 @@ struct RouteCard: View {
                     .frame(width: 80)
                 
                 Button(action: toggleFavorite) {
-                          Image(systemName: isFavorited ? "star.fill" : "star")
-                            .foregroundColor(isFavorited ? .yellow : .secondary)
+                    Image(systemName: isFavorited ? "star.fill" : "star")
+                        .foregroundColor(isFavorited ? .yellow : .secondary)
                 }
                 .buttonStyle(.plain)
             }
             .frame(minWidth: 80, alignment: .topTrailing)
         }
         .padding()
-        .background(isSelected ? Color.green.opacity(0.2) : Color(.black))
+        .background(isSelected
+                        ? Color.green.opacity(0.2)
+                        : Color(.black))
         .cornerRadius(12)
         .shadow(radius: isSelected ? 4 : 1)
-        .onTapGesture(perform: onTap)
+        .onTapGesture(perform: onTap)          
     }
 }
 
 struct RouteCard_Previews: PreviewProvider {
     static var previews: some View {
-        //using the first stop and its third route as sample
+        // sample data for preview; replace with real Stop and Route values
+        let sampleStop = Stop(id: 1, name: "Main St", routeList: [])
+        let sampleRoute = Route(id: 10, name: "10 - Downtown", arrivalTime: 0, direction: "northbound", realTime: 0, isMAX: false)
         RouteCard(
-            parentStop: stops[0],
-            line: stops[0].routeList[2],
+            parentStop: sampleStop,
+            line: sampleRoute,
             isSelected: false,
             onTap: {},
             isFavorited: false,
             toggleFavorite: {}
         )
+        .preferredColorScheme(.dark)
     }
 }
 

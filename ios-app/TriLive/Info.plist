@@ -4,5 +4,7 @@
 <dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need your location to show nearby stops/routes.</string>
+	<key>API_BASE_URL</key>
+	<string>https://trilive-backend.onrender.com</string>
 </dict>
 </plist>
