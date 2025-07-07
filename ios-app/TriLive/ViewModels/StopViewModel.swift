@@ -16,11 +16,35 @@ final class StopViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var showError: Bool = false
+    
+    @Published var arrivals: [Arrival] = []
+    @Published var isLoadingArrivals = false
+    @Published var showArrivalsError = false
+    @Published var arrivalsErrorMessage: String?
+
+    
 
     private let stopService: StopService
 
     init(service: StopService = .shared) {
         self.stopService = service
+    }
+    
+    func loadArrivals(for stop: Stop) {
+      isLoadingArrivals = true
+      showArrivalsError = false
+
+      ArrivalService.shared.fetchArrivals(for: stop.id) { [weak self] result in
+        DispatchQueue.main.async {
+          self?.isLoadingArrivals = false
+          switch result {
+          case .success(let arr): self?.arrivals = arr
+          case .failure(let err):
+            self?.arrivalsErrorMessage = err.localizedDescription
+            self?.showArrivalsError = true
+          }
+        }
+      }
     }
 
     func loadStops() {

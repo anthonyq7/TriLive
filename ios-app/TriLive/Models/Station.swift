@@ -8,9 +8,10 @@
 import Foundation
 import MapKit
 
-struct Station: Identifiable, Decodable {
-  let id: Int
-  let name: String
-  let latitude: Double
-  let longitude: Double
+struct Station: Identifiable, Codable, Hashable {
+    let id: Int
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    let description: String?
 }

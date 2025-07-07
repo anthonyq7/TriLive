@@ -3,23 +3,12 @@ import CoreLocation
 
 struct SearchBar: View {
     @ObservedObject var locationManager: LocationManager
-    // observed object to get user location updates
-    
     @Binding var searchQuery: String
-    // two-way binding for the text field content
-    
     @Binding var stopSelected: Bool
-    // binding flag to know if a stop has been selected
-    
     @Binding var selectedStop: Stop?
-    // binding to the currently selected stop
-    
     var stopList: [Stop]
-    // list of stops to search through
-    
     var isFocused: FocusState<Bool>.Binding
-    // binding to track whether the text field is focused
-    
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -32,56 +21,55 @@ struct SearchBar: View {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(.secondarySystemBackground))
                     )
-                
+                    .foregroundColor(.primary)
+
                 Image(systemName: "magnifyingglass")
+                    .padding(.horizontal, 16)
                     .onTapGesture { performSearch() }
-                    .padding(.horizontal, 24)
-                    .onChange(of: searchQuery) { new in
-                        // clear selection if query no longer matches selected stop. it says there's a problem with the ios 17 compatability but idk how it works exactly - 'onChange(of:perform:)' was deprecated in iOS 17.0: Use `onChange` with a two or zero parameter action closure instead.
-                        if new != selectedStop?.name {
-                            selectedStop = nil
-                            stopSelected = false
+            }
+            .padding(.horizontal)
+
+            // dropdown only when focused and we have results
+            if isFocused.wrappedValue && !stopList.isEmpty {
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        // current-location row
+                        HStack {
+                            Text("Use Current Location")
+                            Spacer()
+                            Image(systemName: "location.fill")
                         }
-                    }
-                
-                if isFocused.wrappedValue {
-                    // show suggestions only when focused
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 0) {
-                            HStack {
-                                Text("Use Current Location")
-                                Spacer()
-                                Image(systemName: "location.fill")
-                            }
-                            .padding(12)
-                            .background(Color.white)
-                            .onTapGesture {
-                                isFocused.wrappedValue = false
-                            }
+                        .padding(12)
+                        .foregroundColor(.primary)
+                        .background(Color(.systemBackground))
+                        .onTapGesture {
+                            isFocused.wrappedValue = false
+                            // handle actual location pick…
+                        }
+                        Divider()
+
+                        // your stops
+                        ForEach(stopList) { stop in
+                            Text(stop.name)
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundColor(.primary)
+                                .background(Color(.systemBackground))
+                                .onTapGesture { select(stop) }
                             Divider()
-                            
-                            ForEach(stopList) { stop in
-                                Text("\(stop.name) (Stop \(stop.id))")
-                                    .padding(12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.white)
-                                    .onTapGesture {
-                                        select(stop)
-                                    }
-                                Divider()
-                            }
                         }
                     }
-                    .frame(maxHeight: 250)
-                    .cornerRadius(8)
-                    .padding(.horizontal, 24)
-                    .zIndex(1)
                 }
+                .frame(maxHeight: 250)
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(12)
+                .shadow(radius: 4)
+                .padding(.horizontal)
+                .zIndex(1)
             }
         }
     }
-    
-    //private helper to find and select a matching stop
+
     private func performSearch() {
         if let match = stopList.first(where: {
             $0.name.localizedCaseInsensitiveContains(searchQuery)
@@ -90,12 +78,11 @@ struct SearchBar: View {
             select(match)
         }
     }
-    
-    //private helper to update bindings when a stop is chosen
+
     private func select(_ stop: Stop) {
         searchQuery = stop.name
-        selectedStop = stop
-        stopSelected = true
+        selectedStop  = stop
+        stopSelected  = true
         isFocused.wrappedValue = false
     }
 }
