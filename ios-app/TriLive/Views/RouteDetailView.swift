@@ -7,14 +7,16 @@ struct RouteDetailView: View {
     @State private var isLiveActive = true
     @Binding var navPath: NavigationPath
     @ObservedObject var timeManager: TimeManager
-    
+    @StateObject private var stationVM = StationsViewModel()
+
     var body: some View {
         ZStack {
             Color.appBackground
                 .ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: 24) {
-                    // — Header —
+                   
                     VStack(alignment: .leading, spacing: 1) {
                         Text(route.name)
                             .font(.largeTitle)
@@ -26,8 +28,8 @@ struct RouteDetailView: View {
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 16)
-                    
-                    //for the stop button
+
+                    // stop button to exit live activity
                     Button("Stop") {
                         isLiveActive = false
                         navPath.removeLast()
@@ -40,15 +42,15 @@ struct RouteDetailView: View {
                     .background(Color.red)
                     .cornerRadius(25)
                     .padding(.horizontal)
-                    
-                    //live activity section
+
+                    // live activity section
                     if isLiveActive {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Live Activity In Progress…")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
-                            
+
                             LiveActivityCard(timeManager: timeManager, route: route)
                         }
                         .padding(20)
@@ -57,45 +59,43 @@ struct RouteDetailView: View {
                         .padding(.horizontal)
                         .padding(.vertical, 24)
                     }
-                    
-                    //shows other options on the route that can be selected
-                    /*
-                     VStack(alignment: .leading, spacing: 12) {
-                     Text("Other Routes at this stop")
-                     .font(.headline)
-                     .foregroundColor(.white)
-                     
-                     ForEach(parentStop.routeList.filter { $0.id != route.id }) { other in
-                     NavigationLink(value: other) {
-                     RouteCard(
-                     parentStop: parentStop,
-                     line: other,
-                     isSelected: false,
-                     onTap: { },
-                     isFavorited: false,
-                     toggleFavorite: { }
-                     )
-                     .background(Color(.systemBackground))
-                     .cornerRadius(24)
-                     .padding(.horizontal)
-                     }
-                     }
-                     .padding(.horizontal)
-                     }
-                     .padding(.vertical)*/
+
+                    // map or station focus view
+                    if let focus = stationVM.stations.first(where: { $0.id == parentStop.id }) {
+                        StationsMapView(
+                            viewModel: stationVM,
+                            focusStation: focus
+                        )
+                        .frame(height: 200)
+                        .cornerRadius(12)
+                        .padding(.horizontal, 24)
+                    } else {
+                        // placeholder while loading or on no match
+                        ProgressView()
+                            .frame(height: 200)
+                            .padding(.horizontal, 24)
+                    }
+                }
+                .onAppear {
+                    stationVM.loadStations()
+                    // fetch station data when view appears
                 }
             }
-            .navigationTitle("Route Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
         }
+        .navigationTitle("Route Details")
+        // set nav bar title
+        
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
     }
-    
-    
+
+
+    // nested view for live activity details
     struct LiveActivityCard: View {
         @ObservedObject var timeManager: TimeManager
+        // observe timer updates
         let route: Route
-        //will be function when we actually have real time data but just filler for now
+
         var body: some View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -112,66 +112,56 @@ struct RouteDetailView: View {
                     )
                     .font(.subheadline)
                 }
-                
+
                 Text("Your ride will be here in \(route.minutesUntilArrival) min\(route.minutesUntilArrival == 1 ? "" : "s")")
                     .font(.subheadline)
-                
+
+                // compute progress (note: let declarations not allowed directly in ViewBuilder)
                 let progress = min(timeManager.timeDifferenceInMinutes(), Double(route.minutesUntilArrival))
                 
                 ProgressView(value: progress, total: Double(route.minutesUntilArrival))
             }
+            .padding()
+            .background(Color(.systemBackground).opacity(0.1))
+            .cornerRadius(8)
         }
     }
 }
 
+// timer manager for live updates
 class TimeManager: ObservableObject {
     @Published var currentTime: Date = Date()
-    let oldTime: Date
-    private var timer: Timer?
+    // current time published every second
     
+    let oldTime: Date
+    // timestamp when timer started
+    
+    private var timer: Timer?
+
     init() {
         self.oldTime = Date()
         startTime()
     }
-    
+
     func startTime() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             self.currentTime = Date()
+            // update every second
         }
     }
-    
-    deinit {
-        timer?.invalidate()
-    }
-    
-    func stopTime(){
+
+    func stopTime() {
         timer?.invalidate()
         timer = nil
     }
-    
+
     func timeDifferenceInMinutes() -> Double {
         return currentTime.timeIntervalSince(oldTime) / 60
     }
+
+    deinit {
+        timer?.invalidate()
+        // clean up timer
+    }
 }
-
-/*
- struct RouteDetailView_Previews: PreviewProvider {
- 
- @Binding var navPath: NavigationPath
- 
- static var previews: some View {
- NavigationStack {
- RouteDetailView(
- parentStop: stops[0],
- route:      stops[0].routeList[2],
- navPath: $navigationPath
- )
- }
- }
- }
- */
-
-
-
-

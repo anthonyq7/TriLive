@@ -9,12 +9,16 @@ import SwiftUI
 
 struct FavoriteCard: View {
     let parentStop: Stop
+    // stop this favorite belongs to
     let route: Route
+    // route info for this favorite
     let onRemove: () -> Void
+    // action to call when remove button is tapped
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Route badge
+            // layout items horizontally
+            // route badge with id or "MAX"
             Text(route.isMAX ? "MAX" : "\(route.id)")
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -26,7 +30,7 @@ struct FavoriteCard: View {
                 .scaledToFill()
                 .frame(width: 54, height: 54)
             
-            // Route name
+            // route details (name and direction)
             VStack(alignment: .leading, spacing: 4) {
                 Text(route.name)
                     .font(.headline)
@@ -44,16 +48,15 @@ struct FavoriteCard: View {
             
             Spacer()
             
-            // Stop info
-            VStack(alignment: .trailing, spacing: 12){
+            // stop info and remove button
+            VStack(alignment: .trailing, spacing: 12) {
                 Text("Stop \(parentStop.id)")
                     .font(.subheadline)
                     .lineLimit(1)
                     .foregroundColor(.white)
                     .frame(width: 65)
-                    
                 
-                // Remove favorite button
+                // remove favorite button
                 Button(action: onRemove) {
                     Image(systemName: "star.fill")
                         .font(.title2)
@@ -70,14 +73,16 @@ struct FavoriteCard: View {
                 .stroke(Color.white, lineWidth: 2)
         )
         .cornerRadius(12)
-        
     }
 }
 
 #Preview {
+    // define sample data for preview
+    let sampleStop = Stop(id: 1, name: "Main St", routeList: [])
+    let sampleRoute = Route(id: 10, name: "10 - Downtown", arrivalTime: 0, direction: "northbound", realTime: 0, isMAX: false)
     FavoriteCard(
-        parentStop: stops[0],
-        route: stops[0].routeList[0],
+        parentStop: sampleStop,
+        route: sampleRoute,
         onRemove: {}
     )
     .preferredColorScheme(.dark)
