@@ -6,22 +6,15 @@ struct MainTabView: View {
     @ObservedObject var timeManager: TimeManager
     @Binding var navigationPath: NavigationPath
 
-    // Local view model for stops
+    // shared view model for stops & arrivals
     @StateObject private var stopVM = StopViewModel()
 
-    // Local UI state
-    @State private var selectedTab = Tab.debug
+    // which tab is selected
+    @State private var selectedTab = Tab.home
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Debug tab
-            NavigationStack(path: $navigationPath) {
-                DebugStopsView()
-            }
-            .tabItem { Label("Debug", systemImage: "ant.fill") }
-            .tag(Tab.debug)
-
-            // Home tab
+            //Home tab
             NavigationStack(path: $navigationPath) {
                 HomeView(
                     favoriteRouteIDs: $favoriteRouteIDs,
@@ -33,26 +26,25 @@ struct MainTabView: View {
             .tabItem { Label("Home", systemImage: "bus.fill") }
             .tag(Tab.home)
 
-            // Favorites tab
+            // MARK: – Favorites tab
             NavigationStack(path: $navigationPath) {
                 FavoritesView(
                     favoriteRouteIDs: $favoriteRouteIDs,
                     navPath:          $navigationPath,
-                    stops:            stopVM.allStops,
-                    timeManager:      timeManager
+                    timeManager:      timeManager,
+                    stopVM:           stopVM
                 )
             }
             .tabItem { Label("Favorites", systemImage: "star.fill") }
             .tag(Tab.favorites)
 
-            // Settings tab
+            //Settings tab
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
         }
         .onAppear {
-            stopVM.loadStops()
-            // kick off stop loading once
+            stopVM.loadStops()    // preload stops & arrivals
         }
         .preferredColorScheme(.dark)
     }
@@ -64,22 +56,3 @@ extension MainTabView {
     }
 }
 
-struct DebugStopsView: View {
-    @State private var names: [String] = []
-
-    var body: some View {
-        List(names, id: \.self) { Text($0) }
-            .task {
-                StopService.shared.fetchStops { result in
-                    switch result {
-                    case .success(let stops):
-                        DispatchQueue.main.async {
-                            self.names = stops.map(\.name)
-                        }
-                    case .failure(let err):
-                        print("Fetch stops failed:", err)
-                    }
-                }
-            }
-    }
-}
