@@ -1,9 +1,6 @@
 # backend/app/routers/station.py
 
-import os
-import json
-import traceback
-import asyncio
+import os, json, traceback, asyncio
 from typing import List
 
 import httpx
@@ -14,12 +11,11 @@ from backend.app.db.database import SessionLocal
 from backend.app.models.station import StationModel
 from backend.app.schemas.station import Station
 from backend.app.schemas.station import Arrival
-from backend.app.utils.trimet import fetch_and_load_stations
-from backend.app.utils.trimet import fetch_arrivals
+from backend.app.utils.trimet import (fetch_and_load_stations, fetch_arrivals, TRIMET_STOPS_URL)
 
 router = APIRouter()
-TRIMET_KEY    = os.getenv("TRIMET_API_KEY")
-TRIMET_STOPS  = "https://developer.trimet.org/ws/v2/stops"
+TRIMET_KEY  = os.getenv("TRIMET_API_KEY")
+
 
 
 def get_db():
@@ -40,15 +36,15 @@ async def import_stations(
     request.app.state.arrivals_cache.clear()
 
     # load all stops into the DB
-    count = fetch_and_load_stations(db, bbox)
+    count = await asyncio.to_thread(fetch_and_load_stations, db, bbox)
 
-    # now _immediately_ fetch arrivals for each imported stop
-    stops = [s.id for s in db.query(StationModel.id).all()]
+    # correctly pull just the integer IDs
+    stops = [sid for (sid,) in db.query(StationModel.id).all()]
+    # (or: stops = [s.id for s in db.query(StationModel).all()])
+
+    # now kick off arrivals fetches (you might choose to await or batch these)
     coros = [fetch_arrivals(sid) for sid in stops]
-    results = await asyncio.gather(*coros, return_exceptions=True)
-    for sid, res in zip(stops, results):
-        if not isinstance(res, Exception):
-            request.app.state.arrivals_cache[sid] = res
+    await asyncio.gather(*coros)
 
     return {"imported": count}
 
@@ -72,7 +68,7 @@ async def get_nearby_stations(
         "json":   "true",
     }
     async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(TRIMET_STOPS, params=params)
+        resp = await client.get(TRIMET_STOPS_URL, params=params)
         resp.raise_for_status()
 
     locations = resp.json().get("resultSet", {}).get("location", [])
