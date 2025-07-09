@@ -20,6 +20,5 @@ COPY backend/app ./backend/app
 # Expose FastAPI port
 EXPOSE 8000
 
-# Launch with Gunicorn+Uvicorn worker
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", \
-    "backend.app.main:app", "--bind", "0.0.0.0:8000"]
+# run uvicorn, letting PORT default to 8000 if not set
+CMD ["sh","-c","uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
