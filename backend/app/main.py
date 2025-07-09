@@ -18,7 +18,6 @@ _arrivals_cache: Dict[int, List[dict]] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── STARTUP ─────────────────────────────────────────────────────────────
     # 1) Connect to your Redis (using REDIS_URL from Render)
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     app.state.redis = await redis.from_url(redis_url, decode_responses=True)
@@ -30,15 +29,12 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
 
     # 4) Kick off the background refresher (don’t await—let it run on its own)
-    asyncio.create_task(refresh_arrivals_loop(60))
-    # ───────────────────────────────────────────────────────────────────────────
+    asyncio.create_task(refresh_arrivals_loop(30))
 
     yield  # <-- everything above runs at startup
 
-    # ── SHUTDOWN ─────────────────────────────────────────────────────────────
-    # Cleanly close your Redis connection
     await app.state.redis.close()
-    # ───────────────────────────────────────────────────────────────────────────
+
 
 async def refresh_arrivals_loop(interval_s: int = 60):
     """Every `interval_s` seconds, re-fetch arrivals for

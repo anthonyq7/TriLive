@@ -3,6 +3,7 @@
 import os
 import json
 import traceback
+import asyncio
 from typing import List
 
 import httpx
@@ -14,6 +15,7 @@ from backend.app.models.station import StationModel
 from backend.app.schemas.station import Station
 from backend.app.schemas.station import Arrival
 from backend.app.utils.trimet import fetch_and_load_stations
+from backend.app.utils.trimet import fetch_arrivals
 
 router = APIRouter()
 TRIMET_KEY    = os.getenv("TRIMET_API_KEY")
@@ -32,18 +34,23 @@ def get_db():
 async def import_stations(
     request: Request,
     db: Session = Depends(get_db),
-    bbox: str | None = Query(None, description="Optional bbox `minLng,minLat,maxLng,maxLat`"),
+    bbox: str | None = Query(None),
 ):
-    """
-    Fetch & upsert ALL stops from TriMet into your StationModel table.
-    """
-    await request.app.state.redis.delete("stations")
-    try:
-        count = fetch_and_load_stations(db, bbox)
-        return {"imported": count}
-    except Exception:
-        tb = traceback.format_exc()
-        raise HTTPException(500, detail=tb)
+    # clear old cache
+    request.app.state.arrivals_cache.clear()
+
+    # load all stops into the DB
+    count = fetch_and_load_stations(db, bbox)
+
+    # now _immediately_ fetch arrivals for each imported stop
+    stops = [s.id for s in db.query(StationModel.id).all()]
+    coros = [fetch_arrivals(sid) for sid in stops]
+    results = await asyncio.gather(*coros, return_exceptions=True)
+    for sid, res in zip(stops, results):
+        if not isinstance(res, Exception):
+            request.app.state.arrivals_cache[sid] = res
+
+    return {"imported": count}
 
 
 @router.get("/stations/near", response_model=List[Station], tags=["stations"])
