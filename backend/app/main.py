@@ -44,7 +44,7 @@ async def refresh_arrivals_loop(interval_s: int = 60):
     while True:
         db: Session = SessionLocal()
         try:
-            stops = db.query(StationModel.id).all()
+            stops = [sid for (sid,) in db.query(StationModel.id).all()]
             # fire off all your arrival‐fetches in parallel
             coros = [fetch_arrivals(sid) for (sid,) in stops]
             results = await asyncio.gather(*coros, return_exceptions=True)
