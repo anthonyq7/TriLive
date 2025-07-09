@@ -41,20 +41,26 @@ async def refresh_arrivals_loop(interval_s: int = 60):
     every station in your DB and store in app.state.arrivals_cache."""
     # initial delay so we don’t block startup
     await asyncio.sleep(interval_s)
+
     while True:
-        db: Session = SessionLocal()
+        db = SessionLocal()
         try:
+            # 1) Pull [(id,), …] → [id, …]
             stops = [sid for (sid,) in db.query(StationModel.id).all()]
-            # fire off all your arrival‐fetches in parallel
-            coros = [fetch_arrivals(sid) for (sid,) in stops]
+
+            # 2) Fire off all your arrival-fetch coroutines
+            coros = [fetch_arrivals(sid) for sid in stops]
             results = await asyncio.gather(*coros, return_exceptions=True)
 
-            for (sid,), res in zip(stops, results):
+            # 3) Zip the flat IDs back to the results
+            for sid, res in zip(stops, results):
                 if not isinstance(res, Exception):
                     app.state.arrivals_cache[sid] = res
+
         finally:
             db.close()
 
+        # wait before the next cycle
         await asyncio.sleep(interval_s)
 
 # Attach our lifespan handler
