@@ -83,8 +83,10 @@ struct FavoritesView: View {
                         parentStop: stop,
                         route:      route,
                         navPath:    $navPath,
-                        timeManager: timeManager
+                        timeManager: timeManager,
+                        stopVM: stopVM
                     )
+                    
                 } else {
                     EmptyView()
                 }

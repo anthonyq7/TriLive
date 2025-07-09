@@ -12,7 +12,7 @@ private struct API {
     static var baseURL: URL {
         guard let s = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
               let url = URL(string: s) else {
-            fatalError("🔴 API_BASE_URL is missing or invalid in Info.plist")
+            fatalError("API_BASE_URL is missing or invalid in Info.plist")
         }
         return url
     }
@@ -48,5 +48,31 @@ final class StationService {
             }
         }.resume()
     }
-}
+    
+    func fetchRoutes(
+        for stopID: Int,
+        completion: @escaping (Result<[Route], Error>) -> Void
+      ) {
+        let url = API.baseURL
+          .appendingPathComponent("stations")
+          .appendingPathComponent("\(stopID)")
+          .appendingPathComponent("routes")
+
+        URLSession.shared.dataTask(with: url) { data, _, error in
+          if let e = error {
+            completion(.failure(e)); return
+          }
+          guard let d = data else {
+            completion(.failure(URLError(.badServerResponse))); return
+          }
+          do {
+            let routes = try JSONDecoder().decode([Route].self, from: d)
+            completion(.success(routes))
+          } catch {
+            completion(.failure(error))
+          }
+        }
+        .resume()
+      }
+    }
 

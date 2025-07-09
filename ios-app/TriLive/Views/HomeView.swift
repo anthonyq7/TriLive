@@ -1,4 +1,8 @@
+// HomeView.swift
+// TriLive
+
 import SwiftUI
+import CoreLocation
 
 struct HomeView: View {
     // injected from App entry-point
@@ -7,26 +11,27 @@ struct HomeView: View {
     @ObservedObject var timeManager: TimeManager
     @Binding var navigationPath: NavigationPath
 
-    // search & focus state
+    // this tracks whether a stop has been chosen
+    @State private var stopSelected = false
+
+    // search text & focus state
     @State private var searchQuery = ""
     @FocusState private var isSearchFocused: Bool
 
-    // stops & arrivals
+    // view model for stops & arrivals
     @StateObject private var stopVM = StopViewModel()
 
-    // tap-to-highlight / confirmation
+    // to highlight a route before confirming navigation
     @State private var focusedRouteID: Int?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                // your grey app background
                 Color("AppBackground")
                     .ignoresSafeArea()
-
-                // main content
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
+                        // your custom logo + welcome
                         ExtractedLogoAndWelcomeView()
 
                         SearchBar(
@@ -53,14 +58,14 @@ struct HomeView: View {
                                 } else {
                                     LazyVStack(spacing: 12) {
                                         ForEach(stopVM.arrivals) { arrival in
-                                            // build a Route from the Arrival
+                                            // convert Arrival to Route for display
                                             let route = Route(
                                                 id:           arrival.route,
-                                                name:         "\(arrival.route)",
+                                                name:         arrival.name,
                                                 arrivalTime:  arrival.scheduled,
-                                                direction:    "",
+                                                direction:    arrival.direction,
                                                 realTime:     arrival.estimated ?? arrival.scheduled,
-                                                isMAX:        false
+                                                isMAX:        arrival.isMAX
                                             )
                                             RouteCard(
                                                 parentStop:    stop,
@@ -83,7 +88,6 @@ struct HomeView: View {
                     .padding(.top, 24)
                 }
 
-                // loading overlay
                 if stopVM.isLoading {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     ProgressView("Loading stops…")
@@ -92,26 +96,22 @@ struct HomeView: View {
                         .cornerRadius(8)
                 }
 
-                // ─── CONFIRMATION OVERLAY ───────────────────
                 if let stop = stopVM.selectedStop,
                    let rid = focusedRouteID,
                    let arrival = stopVM.arrivals.first(where: { $0.route == rid }) {
-                    
-                    // blur everything
+
                     VisualEffectBlur(blurStyle: .systemThinMaterialDark)
                         .ignoresSafeArea()
                         .zIndex(1)
 
-                    // center card + cancel button
                     VStack(spacing: 16) {
-                        // re-use your RouteCard in “selected” mode
                         let route = Route(
                             id:           arrival.route,
-                            name:         "\(arrival.route)",
+                            name:         arrival.name,
                             arrivalTime:  arrival.scheduled,
-                            direction:    "",
+                            direction:    arrival.direction,
                             realTime:     arrival.estimated ?? arrival.scheduled,
-                            isMAX:        false
+                            isMAX:        arrival.isMAX
                         )
                         RouteCard(
                             parentStop:  stop,
@@ -124,13 +124,12 @@ struct HomeView: View {
                         .padding()
                         .background(Color(.secondarySystemBackground).opacity(0.8))
                         .cornerRadius(12)
-                        
-                       // instructional text
+
                         Text("Tap the card again to continue, or Cancel below")
-                          .font(.subheadline)
-                          .foregroundColor(.white.opacity(0.8))
-                          .multilineTextAlignment(.center)
-                          .padding(.horizontal, 16)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
 
                         Button("Cancel") {
                             focusedRouteID = nil
@@ -143,7 +142,6 @@ struct HomeView: View {
                     .zIndex(2)
                 }
             }
-            // errors & lifecycle
             .alert("Error loading stops", isPresented: $stopVM.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -151,24 +149,32 @@ struct HomeView: View {
             }
             .onAppear { stopVM.loadStops() }
             .onChange(of: stopVM.selectedStop) { newStop in
-                if let s = newStop { stopVM.loadArrivals(for: s) }
-                else { stopVM.arrivals = [] }
+                if let s = newStop {
+                    // user picked a stop then start polling every 30s
+                    stopVM.startPollingArrivals(for: s, every: 30)
+                } else {
+                    // no stop selected then stop polling and clear
+                    stopVM.stopPollingArrivals()
+                    stopVM.arrivals = []
+                }
+            }
+            .onAppear {
+                stopVM.loadStops()
             }
         }
-        // tell SwiftUI how to push a Route
         .navigationDestination(for: Route.self) { route in
             RouteDetailView(
                 parentStop:  stopVM.selectedStop!,
                 route:       route,
                 navPath:     $navigationPath,
-                timeManager: timeManager
+                timeManager: timeManager,
+                stopVM: stopVM
             )
         }
     }
 
     // MARK: – Actions
-
-    /// First tap highlights; second tap (on card) confirms
+    //First tap highlights; second tap confirms navigation
     private func confirmOrHighlight(_ route: Route) {
         if focusedRouteID == route.id {
             navigate(to: route)
@@ -177,13 +183,14 @@ struct HomeView: View {
         }
     }
 
-    /// Actually navigate into detail
+    //Perform the actual navigation and start timing
     private func navigate(to route: Route) {
         focusedRouteID = nil
         navigationPath.append(route)
         timeManager.startTimer()
     }
 
+    //Toggle favorite state
     private func toggleFavorite(_ route: Route) {
         if favoriteRouteIDs.contains(route.id) {
             favoriteRouteIDs.remove(route.id)
