@@ -1,6 +1,7 @@
 # backend/app/routers/station.py
 
 import os
+import traceback
 import json
 import asyncio
 from typing import List
@@ -39,21 +40,30 @@ async def import_stations(
     db: Session = Depends(get_db),
     bbox: str | None = Query(None),
 ):
-    # clear old cache
-    request.app.state.arrivals_cache.clear()
+    try:
+        # 1) Clear out any old arrivals
+        request.app.state.arrivals_cache.clear()
 
-    # load all stops into the DB
-    count = await asyncio.to_thread(fetch_and_load_stations, db, bbox)
+        # 2) Load stops into your DB on a background thread
+        count = await asyncio.to_thread(fetch_and_load_stations, db, bbox)
 
-    # correctly pull just the integer IDs
-    stops = [sid for (sid,) in db.query(StationModel.id).all()]
-    # (or: stops = [s.id for s in db.query(StationModel).all()])
+        # 3) Pull out a flat list of station IDs
+        stops = [sid for (sid,) in db.query(StationModel.id).all()]
 
-    # now kick off arrivals fetches (you might choose to await or batch these)
-    coros = [fetch_arrivals(sid) for sid in stops]
-    await asyncio.gather(*coros)
+        # 4) For each ID, call fetch_arrivals(sid) and run them in parallel:
+        coros = [fetch_arrivals(sid) for sid in stops]
+        results = await asyncio.gather(*coros, return_exceptions=True)
 
-    return {"imported": count}
+        # 5) Store each result into your in-memory cache:
+        for sid, res in zip(stops, results):
+            if not isinstance(res, Exception):
+                request.app.state.arrivals_cache[sid] = res
+
+        return {"imported": count}
+
+    except Exception as err:
+        traceback.print_exc()
+        raise HTTPException(500, detail=f"Import failed: {err}")
 
 
 @router.get("/stations/near", response_model=List[Station], tags=["stations"])
