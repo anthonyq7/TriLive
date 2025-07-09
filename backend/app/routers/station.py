@@ -57,7 +57,11 @@ async def import_stations(
         # 5) Store each result into your in-memory cache:
         for sid, res in zip(stops, results):
             if not isinstance(res, Exception):
-                request.app.state.arrivals_cache[sid] = res
+                await request.app.state.redis.hset(
+                    "arrivals",
+                    str(sid),
+                    json.dumps(res),
+                )
 
         return {"imported": count}
 
@@ -186,14 +190,13 @@ async def get_arrivals(request: Request, id: int, limit: int = Query(5, descript
     if not TRIMET_KEY:
         raise HTTPException(500, "TRIMET_API_KEY not set")
 
-    cache: dict[int, list] = request.app.state.arrivals_cache
-    raw = cache.get(id)
+    raw = await request.app.state.redis.hget("arrivals", str(id))
     if raw is None:
         # Cache still warming up
         raise HTTPException(503, "Arrivals cache warming up, retry shortly")
 
-    # Validate via Pydantic and slice
-    validated = [Arrival.model_validate(a) for a in raw]
+    data = json.loads(raw)
+    validated = [Arrival.model_validate(a) for a in data]
     return validated[:limit]
 
 

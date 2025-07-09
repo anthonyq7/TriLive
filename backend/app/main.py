@@ -1,6 +1,7 @@
 # main.py
 import os
 import asyncio
+import json
 from typing import Dict, List
 from contextlib import asynccontextmanager
 
@@ -55,7 +56,11 @@ async def refresh_arrivals_loop(interval_s: int = 60):
             # 3) Zip the flat IDs back to the results
             for sid, res in zip(stops, results):
                 if not isinstance(res, Exception):
-                    app.state.arrivals_cache[sid] = res
+                    await app.state.redis.hset(
+                        "arrivals",
+                        str(sid),
+                        json.dumps(res),
+                    )
 
         finally:
             db.close()
