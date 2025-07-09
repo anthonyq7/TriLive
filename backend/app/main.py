@@ -38,36 +38,33 @@ async def lifespan(app: FastAPI):
 
 
 async def refresh_arrivals_loop(interval_s: int = 60):
-    """Every `interval_s` seconds, re-fetch arrivals for
-    every station in your DB and store in Redis."""
+    """
+    Every `interval_s` seconds, re-fetch arrivals for
+    every station in your DB and store them in app.state.arrivals_cache.
+    """
     # initial delay so we don’t block startup
     await asyncio.sleep(interval_s)
 
     while True:
-        # 1) Offload the blocking DB query into a thread
-        def load_station_ids() -> list[int]:
-            db: Session = SessionLocal()
-            try:
-                return [sid for (sid,) in db.query(StationModel.id).all()]
-            finally:
-                db.close()
+        # open a new DB session
+        db: Session = SessionLocal()
+        try:
+            # grab all station IDs
+            stops = [sid for (sid,) in db.query(StationModel.id).all()]
 
-        stops = await asyncio.to_thread(load_station_ids)
+            # kick off all arrival‐fetches in parallel
+            coros = [fetch_arrivals(sid) for sid in stops]
+            results = await asyncio.gather(*coros, return_exceptions=True)
 
-        # 2) Fire off all your arrival‐fetches in parallel
-        coros   = [fetch_arrivals(sid) for sid in stops]
-        results = await asyncio.gather(*coros, return_exceptions=True)
+            # stash successful results into the in‐memory cache
+            for (sid,), res in zip(stops, results):
+                if not isinstance(res, Exception):
+                    app.state.arrivals_cache[sid] = res
 
-        # 3) Write each successful result into the shared Redis cache
-        for sid, res in zip(stops, results):
-            if not isinstance(res, Exception):
-                await app.state.redis.hset(
-                    "arrivals",
-                    str(sid),
-                    json.dumps(res),
-                )
+        finally:
+            db.close()
 
-        # 4) Wait before the next cycle
+        # wait before the next cycle
         await asyncio.sleep(interval_s)
 
 # Attach our lifespan handler
