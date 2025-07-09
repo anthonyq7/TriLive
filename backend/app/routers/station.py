@@ -10,17 +10,35 @@ import traceback
 from backend.app.db.database import SessionLocal
 from backend.app.models.station import StationModel
 from backend.app.schemas.station import Station
+from backend.app.schemas.station import Arrival
 from backend.app.utils.trimet import fetch_and_load_stations
+from backend.app.utils.trimet import fetch_arrivals
 
 router = APIRouter()
 TRIMET_KEY     = os.getenv("TRIMET_API_KEY")
 TRIMET_V2_URL  = "https://developer.trimet.org/ws/v2/stops"
 
 @router.get(
-    "/stations/near",
-    response_model=List[Station],
-    summary="Fetches live stops near a point from TriMet",
+    "/stations/{id}/arrivals",
+    response_model=List[Arrival],
+    summary="Real-time arrivals at a station (cached, refreshed every 60s)"
 )
+async def get_arrivals(
+    id: int,
+    limit: int = Query(5, description="Max number of arrivals to return"),
+):
+    if not TRIMET_KEY:
+        raise HTTPException(500, "TRIMET_API_KEY not set")
+
+    cache = router.routes[0].app.state.arrivals_cache  # or import `app` and use `app.state.arrivals_cache`
+    raw = cache.get(id)
+    if raw is None:
+        # cache not yet populated
+        raise HTTPException(503, "Arrivals cache warming up, please retry shortly")
+    # validate & slice
+    validated = [Arrival(**a) for a in raw]
+    return validated[:limit]
+    
 async def get_nearby_stations(
     lat: float = Query(..., description="Latitude of center point"),
     lng: float = Query(..., description="Longitude of center point"),
@@ -80,30 +98,6 @@ async def import_stations(
         # send the full stack trace back in the error detail
         tb = traceback.format_exc()
         raise HTTPException(500, detail=tb)
-
-@router.get("/stations/{id}/arrivals", summary="Real-time arrivals at a station")
-async def get_arrivals(id: int, limit: int = 5):
-    if not TRIMET_KEY:
-        raise HTTPException(500, "TRIMET_API_KEY not set")
-    url = "https://developer.trimet.org/ws/v2/arrivals"
-    params = {"appID": TRIMET_KEY, "locIDs": id, "json": "true", "count": limit}
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(url, params=params)
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, str(e))
-    arrivals = resp.json().get("resultSet", {}).get("arrival", [])
-    #maps to sql
-    return [
-        {
-            "route": a["route"],
-            "scheduled": a["scheduled"],
-            "estimated": a.get("estimated"),
-            "vehicle": a.get("vehicleID")
-        }
-        for a in arrivals
-    ]
 
 #this creates the station endpoints
 @router.post("/stations", response_model=Station)

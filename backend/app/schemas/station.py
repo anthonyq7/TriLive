@@ -12,3 +12,9 @@ class Station(BaseModel):
 #tells the api if its okay to convert the SQLALCHEMY model to pydantic response
 class Config:
     orm_mode = True
+
+class Arrival(BaseModel):
+    route:     int
+    scheduled: int
+    estimated: int | None
+    vehicle:   int | None

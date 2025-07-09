@@ -7,12 +7,29 @@
 
 import Foundation
 
-
-// Arrival.swift
-struct Arrival: Identifiable, Codable, Hashable {
+struct Arrival: Identifiable, Decodable {
+  let id: Int
   let route: Int
+  let name: String
+  let direction: String
   let scheduled: Int
   let estimated: Int?
-  let vehicle: String?
-  var id: String { vehicle ?? "\(route)-\(scheduled)" }
+  let isMAX: Bool
+}
+
+extension Arrival {
+  //Minutes from now until the arrival’s `realTime` value
+  var minutesUntilArrival: Int {
+    let comps = Calendar.current.dateComponents([.hour, .minute], from: Date())
+    let currentMins = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+    let h = (estimated ?? scheduled) / 100
+    let m = (estimated ?? scheduled) % 100
+    return max(h * 60 + m - currentMins, 0)
+  }
+
+  //A “3 mins” vs “1 min” friendly string
+  var minutesUntilArrivalString: String {
+    let mins = minutesUntilArrival
+    return "\(mins) min" + (mins == 1 ? "" : "s")
+  }
 }

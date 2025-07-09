@@ -6,6 +6,7 @@ struct RouteDetailView: View {
     let route: Route
     @Binding var navPath: NavigationPath
     @ObservedObject var timeManager: TimeManager
+    @ObservedObject var stopVM: StopViewModel
 
     @State private var isLiveActive = true
     @StateObject private var stationVM = StationsViewModel()
@@ -51,6 +52,8 @@ struct RouteDetailView: View {
                     Button("Stop") {
                         isLiveActive = false
                         navPath.removeLast()
+                        // stops fetching times
+                        stopVM.stopPollingArrivals()
                         timeManager.stopTimer()
                     }
                     .font(.headline)
@@ -192,7 +195,7 @@ struct RouteDetailView_Previews: PreviewProvider {
         )
         let sampleRoute = Route(
             id: 10,
-            name: "10 – Downtown",
+            name: "10 – Downtown", 
             arrivalTime: Int(Date().timeIntervalSince1970) + 300,
             direction: "Northbound",
             realTime: Int(Date().timeIntervalSince1970) + 300,
@@ -203,7 +206,8 @@ struct RouteDetailView_Previews: PreviewProvider {
                 parentStop:  sampleStop,
                 route:       sampleRoute,
                 navPath:     .constant(NavigationPath()),
-                timeManager: TimeManager()
+                timeManager: TimeManager(),
+                stopVM: StopViewModel()
             )
         }
         .previewLayout(.sizeThatFits)
