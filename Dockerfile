@@ -17,11 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your backend code
 COPY backend/app ./backend/app
 
-#bring your FastAPI entrypoint into the image
-COPY main.py .
-
 # Expose FastAPI port
 EXPOSE 8000
 
 # run uvicorn, letting PORT default to 8000 if not set
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "backend.app.main:app", "--bind", "0.0.0.0:$PORT"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "backend.app.main:app", "--bind", "0.0.0.0:8000"]
