@@ -1,6 +1,8 @@
 # backend/app/routers/station.py
 
-import os, json, traceback, asyncio
+import os
+import json
+import asyncio
 from typing import List
 
 import httpx
@@ -9,12 +11,17 @@ from sqlalchemy.orm import Session
 
 from backend.app.db.database import SessionLocal
 from backend.app.models.station import StationModel
-from backend.app.schemas.station import Station
-from backend.app.schemas.station import Arrival
-from backend.app.utils.trimet import (fetch_and_load_stations, fetch_arrivals, TRIMET_STOPS_URL)
+from backend.app.schemas.station import Station, Arrival
+
+# Import only the TriMet logic—no routers—from utils/trimet.py
+from backend.app.utils.trimet import (
+    fetch_and_load_stations,
+    fetch_arrivals,
+    TRIMET_STOPS_URL,
+)
 
 router = APIRouter()
-TRIMET_KEY  = os.getenv("TRIMET_API_KEY")
+TRIMET_KEY = os.getenv("TRIMET_API_KEY")
 
 
 
