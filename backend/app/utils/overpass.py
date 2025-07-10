@@ -1,7 +1,7 @@
 import os
 import requests
 from typing import Iterator, Tuple
-from app.schemas.station import StationOut
+from backend.app.schemas.station import StationOut
 
 # Public Overpass endpoint—no signup required
 OVERPASS_URL = os.getenv(
