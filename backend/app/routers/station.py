@@ -94,28 +94,35 @@ async def import_stations(
     return {"imported": count}
 
 @router.get("/stations/{id}/arrivals", summary="Real-time arrivals at a station")
-async def get_arrivals(id: int, limit: int = 5):
+async def get_arrivals(
+    id: int,
+    limit: int = 5,
+    minutes: int = 60,      
+):
     if not TRIMET_KEY:
         raise HTTPException(500, "TRIMET_API_KEY not set")
-    url = "https://developer.trimet.org/ws/v2/arrivals"
-    params = {"appID": TRIMET_KEY, "locIDs": id, "json": "true", "count": limit}
+
+    params = {
+        "appID":    TRIMET_KEY,
+        "locIDs":   id,
+        "json":     "true",
+        "arrivals": limit,        
+        "minutes":  minutes,     
+    }
     async with httpx.AsyncClient() as client:
-        resp = await client.get(url, params=params)
-    try:
+        resp = await client.get("https://developer.trimet.org/ws/v2/arrivals", params=params)
         resp.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, str(e))
-    arrivals = resp.json().get("resultSet", {}).get("arrival", [])
-    #maps to sql
-    return [
-        {
-            "route": a["route"],
-            "scheduled": a["scheduled"],
-            "estimated": a.get("estimated"),
-            "vehicle": a.get("vehicleID")
-        }
-        for a in arrivals
-    ]
+        data = resp.json()
+        arrivals = data.get("resultSet", {}).get("arrival", [])
+        return [
+            {
+                "route":     a["route"],
+                "scheduled": a["scheduled"],
+                "estimated": a.get("estimated"),
+                "vehicle":   a.get("vehicleID"),
+            }
+            for a in arrivals
+        ]
 
 #this creates the station endpoints
 @router.post("/stations", response_model=Station)
