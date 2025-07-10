@@ -1,32 +1,34 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing   import Optional
 
-#used to validate the station data from the api we use
-class Station(BaseModel):
-    id:        int
-    name:      str
-    latitude:  float
-    longitude: float
+# shared fields
+class StationBase(BaseModel):
+    name:        str
+    latitude:    float
+    longitude:   float
     description: Optional[str] = None
 
+# used for inbound POST/PUT (you won’t actually send an ID here)
+class StationCreate(StationBase):
+    pass
+
+# what you return on GET /stations and GET /stations/{id}
+class Station(StationBase):
+    id: int
+
     class Config:
+        # Pydantic v1
         orm_mode = True
+        # if you’re on Pydantic v2, use instead:
+        # from_attributes = True
+
+# identical to Station, but shows how you could alias or
+# add extra fields for “output”‐only models
+class StationOut(Station):
+    pass
 
 class Arrival(BaseModel):
     route:     int
     scheduled: int
-    estimated: int | None
-    vehicle:   int | None
-
-class StationOut(BaseModel):
-    id:            int
-    name:          str
-    latitude:      float
-    longitude:     float
-    description:   Optional[str] = None
-
-    class Config:
-        # for Pydantic v2
-        from_attributes = True
-        # if you’re on v1, use orm_mode instead:
-        # orm_mode = True
+    estimated: Optional[int] = None
+    vehicle:   Optional[int] = None
