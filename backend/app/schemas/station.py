@@ -17,3 +17,16 @@ class Arrival(BaseModel):
     scheduled: int
     estimated: int | None
     vehicle:   int | None
+
+class StationOut(BaseModel):
+    id:            int
+    name:          str
+    latitude:      float
+    longitude:     float
+    description:   Optional[str] = None
+
+    class Config:
+        # for Pydantic v2
+        from_attributes = True
+        # if you’re on v1, use orm_mode instead:
+        # orm_mode = True
