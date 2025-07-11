@@ -13,8 +13,16 @@ class StationCreate(StationBase):
     pass
 
 # what you return on GET /stations and GET /stations/{id}
-class Station(StationBase):
-    id: int
+class Station(BaseModel):
+    id:         int
+    name:       str
+    latitude:   float
+    longitude:  float
+    description: Optional[str] = None
+    trimet_id:  Optional[int]   = None
+
+    class Config:
+        orm_mode = True
 
     class Config:
         # Pydantic v1
@@ -24,11 +32,21 @@ class Station(StationBase):
 
 # identical to Station, but shows how you could alias or
 # add extra fields for “output”‐only models
-class StationOut(Station):
-    pass
+class StationOut(BaseModel):
+    id:          int
+    name:        str
+    latitude:    float
+    longitude:   float
+    description: Optional[str] = None
+    trimet_id:   Optional[int]   = None
+
+    class Config:
+        from_attributes = True
 
 class Arrival(BaseModel):
     route:     int
     scheduled: int
     estimated: Optional[int] = None
     vehicle:   Optional[int] = None
+
+
