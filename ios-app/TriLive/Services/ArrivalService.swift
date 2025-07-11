@@ -19,25 +19,32 @@ final class ArrivalService {
         return u
     }
     
-    func fetchArrivals(
-        for stopID: Int,
-        completion: @escaping (Result<[Arrival], Error>) -> Void
-    ) {
-        let url = baseURL.appendingPathComponent("stations/\(stopID)/arrivals")
-        URLSession.shared.dataTask(with: url) { data, resp, err in
-            if let err = err { return completion(.failure(err)) }
-            guard let data = data else {
-                return completion(.failure(URLError(.badServerResponse)))
-            }
-            
-            do {
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .millisecondsSince1970
-                let arr = try decoder.decode([Arrival].self, from: data)
-                completion(.success(arr))
-            } catch {
-                completion(.failure(error))
-            }
-        }.resume()
+    func fetchArrivals(for stationID: Int, completion: @escaping (Result<[Arrival],Error>) -> Void) {
+      let url = baseURL
+        .appendingPathComponent("stations")
+        .appendingPathComponent("\(stationID)")
+        .appendingPathComponent("arrivals")
+
+      URLSession.shared.dataTask(with: url) { data, resp, err in
+        if let http = resp as? HTTPURLResponse, http.statusCode == 404 {
+          // station exists but has no trimetID → treat as “no arrivals”
+          DispatchQueue.main.async { completion(.success([])) }
+          return
+        }
+        if let err = err {
+          DispatchQueue.main.async { completion(.failure(err)) }
+          return
+        }
+        guard let data = data else {
+          DispatchQueue.main.async { completion(.failure(URLError(.badServerResponse))) }
+          return
+        }
+        do {
+          let arr = try JSONDecoder().decode([Arrival].self, from: data)
+          DispatchQueue.main.async { completion(.success(arr)) }
+        } catch {
+          DispatchQueue.main.async { completion(.failure(error)) }
+        }
+      }.resume()
     }
 }

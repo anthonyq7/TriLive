@@ -79,7 +79,8 @@ struct RouteCard_Previews: PreviewProvider {
             name:        "NE Broadway & 21st",
             latitude:    45.5120,
             longitude:   -122.6587,
-            description: "Near Broadway"
+            description: "Near Broadway",
+            trimetID:    123456
         )
         let sampleRoute = Route(
             id:           77,

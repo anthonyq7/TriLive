@@ -212,19 +212,20 @@ class TimeManager: ObservableObject {
 struct RouteDetailView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleStop = Stop(
-            id: 1,
-            name: "Main St & 3rd Ave",
-            latitude: 45.5120,
-            longitude: -122.6587,
-            description: "Near the library"
-        )
+            id:          1,
+            name:        "Main St & 3rd Ave",
+            latitude:    45.5120,
+            longitude:  -122.6587,
+            description: "Near the library",
+            trimetID:    123456
+            )
         let sampleRoute = Route(
-            id: 10,
-            name: "10 – Downtown",
-            arrivalTime: Int(Date().timeIntervalSince1970) + 300,
-            direction: "Northbound",
-            realTime: Int(Date().timeIntervalSince1970) + 300,
-            isMAX: false
+            id:           10,
+            name:         "10 – Downtown",
+            arrivalTime:  Int(Date().timeIntervalSince1970) + 300,
+            direction:    "Northbound",
+            realTime:     Int(Date().timeIntervalSince1970) + 300,
+            isMAX:        false
         )
         NavigationStack {
             RouteDetailView(
