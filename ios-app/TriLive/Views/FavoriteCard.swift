@@ -80,7 +80,7 @@ struct FavoriteCard: View {
         name: "Main St & 3rd Ave",
         latitude: 45.512,
         longitude: -122.658,
-        description: "Near the library"
+        description: "Near the library", trimetID: 123456
     )
     // sample Route (manually constructed)
     let sampleRoute = Route(

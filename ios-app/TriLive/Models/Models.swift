@@ -37,7 +37,7 @@ struct Stop: Identifiable, Codable, Hashable {
   let latitude: Double
   let longitude: Double
   let description: String?
-  let trimetID: Int?               
+  let trimetID: Int?
 
   enum CodingKeys: String, CodingKey {
     case id, name, latitude, longitude, description
