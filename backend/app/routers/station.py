@@ -76,7 +76,6 @@ async def import_stations(
 
     if not bbox:
         raise HTTPException(400, "bbox is required")
-
     try:
         coords = [float(x) for x in bbox.split(",")]
         if len(coords) != 4:
@@ -84,14 +83,16 @@ async def import_stations(
     except ValueError:
         raise HTTPException(400, "Invalid bbox format; use min_lon,min_lat,max_lon,max_lat")
 
-    count = 0
-    for station in parse_overpass(coords):
-        # convert Pydantic -> SQLModel
-        db.add(StationModel(**station.model_dump()))
-        count += 1
+    try:
+        stations = parse_overpass(coords)
+    except RuntimeError as e:
+        # this will include the Overpass status & body
+        raise HTTPException(502, f"Overpass error: {e}")
 
+    for station in stations:
+        db.add(StationModel(**station.model_dump()))
     db.commit()
-    return {"imported": count}
+    return {"imported": len(stations)}
 
 @router.get("/stations/{id}/arrivals")
 async def get_arrivals(

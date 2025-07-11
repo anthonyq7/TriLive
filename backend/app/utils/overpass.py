@@ -1,51 +1,43 @@
-import re
 import httpx
-from typing import Iterator
 from backend.app.schemas.station import StationOut
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-def parse_overpass(bbox: list[float]) -> Iterator[StationOut]:
-    """
-    Hit Overpass with a bbox ([min_lon, min_lat, max_lon, max_lat])
-    and yield StationOut objects including any TriMet stop tag.
-    """
-    bbox_str = ",".join(map(str, bbox))
-    # grab nodes tagged as stops/platforms
+def parse_overpass(bbox: list[float]) -> list[StationOut]:
+    # bbox comes in as [min_lon, min_lat, max_lon, max_lat]
+    min_lon, min_lat, max_lon, max_lat = bbox
+    # Overpass wants (south,west,north,east):
+    south, west, north, east = min_lat, min_lon, max_lat, max_lon
+
     query = f"""
     [out:json][timeout:25];
     (
-      node["public_transport"="platform"]({bbox_str});
-      node["public_transport"="stop_position"]({bbox_str});
+    node["public_transport"="platform"]({south},{west},{north},{east});
+    node["public_transport"="stop_position"]({south},{west},{north},{east});
     );
     out body;
     """
+
     resp = httpx.get(OVERPASS_URL, params={"data": query})
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        # bubble a FastAPI-friendly error
+        raise RuntimeError(f"Overpass API returned {e.response.status_code}: {e.response.text}")
+
     data = resp.json()
-
-    for elem in data.get("elements", []):
-        tags = elem.get("tags", {})
-        osm_id = elem["id"]
-
-        # Try a few common ways people tag the TriMet stop number
-        raw = (
-            tags.get("ref:trimet")
-            or tags.get("gtfs:stop_id")
-            or tags.get("trimet:stop_id")
+    stations = []
+    for el in data.get("elements", []):
+        tags = el.get("tags", {})
+        trimet_ref = tags.get("ref:trimet") or tags.get("ref")
+        stations.append(
+            StationOut(
+                id=int(el["id"]),
+                name=tags.get("name", ""),
+                latitude=el["lat"],
+                longitude=el["lon"],
+                description=tags.get("name:en"),
+                trimet_id=int(trimet_ref) if trimet_ref and trimet_ref.isdigit() else None,
+            )
         )
-        trimet_id = None
-        if raw:
-            # extract the leading integer, if any
-            m = re.match(r"^(\d+)", raw)
-            if m:
-                trimet_id = int(m.group(1))
-
-        yield StationOut(
-            id=osm_id,
-            name=tags.get("name", f"Stop {osm_id}"),
-            latitude=elem.get("lat") or elem["center"]["lat"],
-            longitude=elem.get("lon") or elem["center"]["lon"],
-            description=tags.get("description"),
-            trimet_id=trimet_id,
-        )
+    return stations
