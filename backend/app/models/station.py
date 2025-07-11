@@ -5,7 +5,7 @@ class StationModel(Base):
     __tablename__ = "stations"
 
     # switch from Integer → BigInteger so we can store Overpass node IDs
-    trimet_id  = Column(Integer, nullable=True) 
+    trimet_id  = Column(Integer,index=True, nullable=True) 
     id          = Column(BigInteger, primary_key=True, index=True)
     name        = Column(String,   nullable=False)
     latitude    = Column(Float,    nullable=False)
