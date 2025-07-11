@@ -41,6 +41,7 @@ struct HomeView: View {
             RouteDetailView(
                 parentStop:  stopVM.selectedStop!,
                 route:       route,
+                stopVM:      stopVM,       
                 navPath:     $navigationPath,
                 timeManager: timeManager
             )
@@ -101,7 +102,23 @@ struct HomeView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(stopVM.arrivals, id: \.id) { arrival in
-                        arrivalRow(arrival, parentStop: stop)
+                        let route = Route(
+                            id:           arrival.route,
+                            name:         "Route \(arrival.route)",
+                            arrivalTime:  arrival.scheduled,
+                            direction:    "",
+                            realTime:     arrival.estimated ?? arrival.scheduled,
+                            isMAX:        false
+                          )
+                        RouteCard(
+                              parentStop:   stop,
+                              line:         route,
+                              isSelected:   focusedRouteID == route.id,
+                              onTap:        { confirmOrHighlight(route) },
+                              isFavorited:  favoriteRouteIDs.contains(route.id),
+                              toggleFavorite: { toggleFavorite(route) }
+                            )
+                            .padding(.horizontal, 12)
                     }
                 }
             }
@@ -109,25 +126,6 @@ struct HomeView: View {
         .padding(.top, 12)
     }
 
-    private func arrivalRow(_ arrival: Arrival, parentStop stop: Stop) -> some View {
-        let route = Route(
-            id:           arrival.route,
-            name:         "\(arrival.route)",        // or “Route \(arrival.route)”
-            arrivalTime:  arrival.scheduled,
-            direction:    "",                         // you can hard-code or compute this if you want
-            realTime:     arrival.estimated ?? arrival.scheduled,
-            isMAX:        false                       // pick your default
-        )
-        return RouteCard(
-            parentStop:    stop,
-            line:          route,
-            isSelected:    focusedRouteID == route.id,
-            onTap:         { confirmOrHighlight(route) },
-            isFavorited:   favoriteRouteIDs.contains(route.id),
-            toggleFavorite:{ toggleFavorite(route) }
-        )
-        .padding(.horizontal, 12)
-    }
 
     // MARK: – Loading Overlay
 
@@ -142,7 +140,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: – Selection Overlay
+    //Selection Overlay
 
     @ViewBuilder
     private var selectionOverlay: some View {

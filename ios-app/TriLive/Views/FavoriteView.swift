@@ -56,6 +56,7 @@ struct FavoritesView: View {
           RouteDetailView(
             parentStop:  stop,
             route:       route,
+            stopVM: stopVM,
             navPath:     $navPath,
             timeManager: timeManager
           )
