@@ -1,43 +1,33 @@
 import httpx
-from backend.app.schemas.station import StationOut
+from backend.app.schemas.station import Station
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-def parse_overpass(bbox: list[float]) -> list[StationOut]:
-    # bbox comes in as [min_lon, min_lat, max_lon, max_lat]
-    min_lon, min_lat, max_lon, max_lat = bbox
-    # Overpass wants (south,west,north,east):
-    south, west, north, east = min_lat, min_lon, max_lat, max_lon
-
+def parse_overpass(bbox: list[float]) -> list[Station]:
+    # build & fire your Overpass QL request...
     query = f"""
     [out:json][timeout:25];
     (
-    node["public_transport"="platform"]({south},{west},{north},{east});
-    node["public_transport"="stop_position"]({south},{west},{north},{east});
+    node["public_transport"="platform"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+    node["public_transport"="stop_position"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
     );
     out body;
     """
-
     resp = httpx.get(OVERPASS_URL, params={"data": query})
-    try:
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        # bubble a FastAPI-friendly error
-        raise RuntimeError(f"Overpass API returned {e.response.status_code}: {e.response.text}")
-
+    resp.raise_for_status()
     data = resp.json()
-    stations = []
-    for el in data.get("elements", []):
-        tags = el.get("tags", {})
-        trimet_ref = tags.get("ref:trimet") or tags.get("ref")
+
+    stations: list[Station] = []
+    for elem in data["elements"]:
+        tags = elem.get("tags", {})
         stations.append(
-            StationOut(
-                id=int(el["id"]),
+            Station(
+                id=elem["id"],
+                trimet_id=int(tags["ref"]) if tags.get("ref") and tags["ref"].isdigit() else None,
                 name=tags.get("name", ""),
-                latitude=el["lat"],
-                longitude=el["lon"],
-                description=tags.get("name:en"),
-                trimet_id=int(trimet_ref) if trimet_ref and trimet_ref.isdigit() else None,
+                latitude=elem["lat"],
+                longitude=elem["lon"],
+                description=tags.get("description"),
             )
         )
     return stations
