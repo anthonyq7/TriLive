@@ -168,7 +168,6 @@ struct HomeView: View {
                 route:       route,
                 navPath:     $navigationPath,
                 timeManager: timeManager,
-                stopVM: stopVM
             )
         }
     }

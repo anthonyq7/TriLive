@@ -8,13 +8,13 @@
 import Foundation
 
 struct Arrival: Identifiable, Decodable {
-  let id: Int
-  let route: Int
-  let name: String
-  let direction: String
-  let scheduled: Int
-  let estimated: Int?
-  let isMAX: Bool
+    var id: UUID { UUID() }
+    let route: Int
+    let name: String
+    let direction: String
+    let scheduled: Int
+    let estimated: Int?
+    let isMAX: Bool
 }
 
 extension Arrival {

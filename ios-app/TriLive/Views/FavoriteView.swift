@@ -21,7 +21,7 @@ struct FavoritesView: View {
     @ObservedObject var timeManager: TimeManager
 
     // observe the same view model you use in HomeView
-    @ObservedObject var stopVM: StopViewModel
+    @StateObject private var stopVM = StopViewModel()
 
     // compute only the arrivals you’ve favorited
     private var favoriteArrivals: [Arrival] {
@@ -84,7 +84,6 @@ struct FavoritesView: View {
                         route:      route,
                         navPath:    $navPath,
                         timeManager: timeManager,
-                        stopVM: stopVM
                     )
                     
                 } else {

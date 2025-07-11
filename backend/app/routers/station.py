@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Response, Request, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 import json
@@ -155,12 +155,37 @@ async def create_station(request: Request, station: Station, db: Session = Depen
 
 
 @router.get("/stations", response_model=List[Station])
-async def get_stations(request: Request, db: Session = Depends(get_db)):
+async def get_stations(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
     redis = request.app.state.redis
-    #checks cache if its in there it just uses that
+
+    # 1) Try cache
     cached = await redis.get("stations")
     if cached:
+        response.headers["X-Cache"] = "HIT"
         return json.loads(cached)
+
+    # 2) Cache miss → query the database
+    response.headers["X-Cache"] = "MISS"
+    stations = db.query(StationModel).all()
+
+    # 3) Serialize & set in Redis (expire after 60s)
+    result = [
+        Station.model_validate({
+            "id":          s.id,
+            "name":        s.name,
+            "latitude":    s.latitude,
+            "longitude":   s.longitude,
+            "description": s.description,
+        })
+        for s in stations
+    ]
+    await redis.set("stations", json.dumps([s.model_dump() for s in result]), ex=60)
+
+    return result
     
 
 
