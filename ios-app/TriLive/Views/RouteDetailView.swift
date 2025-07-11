@@ -80,20 +80,16 @@ struct RouteDetailView: View {
                             }
                             else {
                                 ForEach(stopVM.arrivals) { a in
-                                    HStack {
-                                        Text("Route \(a.route)")
-                                        Spacer()
-                                        let date = Date(timeIntervalSince1970: Double(a.scheduled) / 1000)
-                                        Text(
-                                            DateFormatter
-                                                .localizedString(
-                                                    from: date,
-                                                    dateStyle: .none,
-                                                    timeStyle: .short
-                                                )
-                                        )
-                                    }
-                                    .foregroundColor(.white)
+                                  HStack {
+                                    Text("Route \(a.route)")
+                                    Spacer()
+                                    Text(DateFormatter.localizedString(
+                                      from: a.scheduledDate,
+                                      dateStyle: .none,
+                                      timeStyle: .short
+                                    ))
+                                  }
+                                  .foregroundColor(.white)
                                 }
                             }
                         }

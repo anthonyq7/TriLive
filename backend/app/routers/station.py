@@ -108,15 +108,18 @@ async def get_arrivals(
     id: int,
     limit: int = 5,
     minutes: int = 60,
-    db: Session = Depends(get_db),           # ← add this
+    db: Session = Depends(get_db),
 ):
+    # try to look up in your DB
     station = db.get(StationModel, id)
-    if not station or not station.trimet_id:
-        raise HTTPException(404, "No TriMet stop ID for that station")
 
+    # if it exists and has a trimet_id, use that, otherwise treat {id} as the TriMet locid
+    tri_id = station.trimet_id if station and station.trimet_id else id
+
+    # now call the TriMet API
     params = {
         "appID":   TRIMET_KEY,
-        "locIDs":  station.trimet_id,
+        "locIDs":  tri_id,
         "count":   limit,
         "minutes": minutes,
         "json":    "true",
@@ -124,7 +127,8 @@ async def get_arrivals(
     async with httpx.AsyncClient() as client:
         resp = await client.get("https://developer.trimet.org/ws/v2/arrivals", params=params)
         resp.raise_for_status()
-        arr = resp.json().get("resultSet", {}).get("arrival", [])
+        arrivals = resp.json().get("resultSet", {}).get("arrival", [])
+
     return [
     {
         "route":     a["route"],
@@ -132,8 +136,9 @@ async def get_arrivals(
         "estimated": a.get("estimated"),
         "vehicle":   a.get("vehicleID"),
     }
-    for a in arr
+    for a in arrivals
     ]
+
 
 #this creates the station endpoints
 @router.post("/stations", response_model=Station)
