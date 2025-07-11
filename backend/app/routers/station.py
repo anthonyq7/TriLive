@@ -162,50 +162,34 @@ async def get_stations(
 ):
     redis = request.app.state.redis
 
-    # 1) Try cache
-    cached = await redis.get("stations")
-    if cached:
+    # 1️⃣ Try cache
+    raw = await redis.get("stations")
+    if raw is not None:
         response.headers["X-Cache"] = "HIT"
-        return json.loads(cached)
+        return json.loads(raw)
 
-    # 2) Cache miss → query the database
+    # 2️⃣ Cache miss → hit the database
     response.headers["X-Cache"] = "MISS"
     stations = db.query(StationModel).all()
 
-    # 3) Serialize & set in Redis (expire after 60s)
-    result = [
+    # 3️⃣ Serialize and prime the cache for 60s
+    out = [
         Station.model_validate({
             "id":          s.id,
             "name":        s.name,
             "latitude":    s.latitude,
             "longitude":   s.longitude,
             "description": s.description,
-        })
+        }) 
         for s in stations
     ]
-    await redis.set("stations", json.dumps([s.model_dump() for s in result]), ex=60)
-
-    return result
+    await redis.set(
+        "stations", 
+        json.dumps([s.model_dump() for s in out]), 
+        ex=60
+    )
+    return out
     
-
-
-    #it queries all the station rows and returns them
-    stations = db.query(StationModel).all()
-    result = []
-    for s in stations:
-        result.append( Station.model_validate({
-            "id":          s.id,
-            "name":        s.name,
-            "latitude":    s.latitude,
-            "longitude":   s.longitude,
-            "description": s.description,
-        }) )
-    
-    #caches results for 60 seconds/ periodic updates
-    await redis.set("stations", json.dumps([s.model_dump() for s in result]), ex=60)
-
-
-    return result
 
 
 #gets a specific station by the station id
