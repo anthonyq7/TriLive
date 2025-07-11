@@ -1,38 +1,51 @@
-import os
-import requests
-from typing import Iterator, Tuple
+import re
+import httpx
+from typing import Iterator
 from backend.app.schemas.station import StationOut
 
-# Public Overpass endpoint—no signup required
-OVERPASS_URL = os.getenv(
-    "OVERPASS_URL",
-    "https://overpass-api.de/api/interpreter"
-)
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-def parse_overpass(
-    bbox: Tuple[float, float, float, float]
-) -> Iterator[StationOut]:
+def parse_overpass(bbox: list[float]) -> Iterator[StationOut]:
     """
-    Query Overpass for stops in the given (west, south, east, north) bbox,
-    and yield StationOut models.
+    Hit Overpass with a bbox ([min_lon, min_lat, max_lon, max_lat])
+    and yield StationOut objects including any TriMet stop tag.
     """
-    west, south, east, north = bbox
-    # Overpass-QL: find all nodes tagged as public_transport=platform
+    bbox_str = ",".join(map(str, bbox))
+    # grab nodes tagged as stops/platforms
     query = f"""
     [out:json][timeout:25];
     (
-    node["public_transport"="platform"]({south},{west},{north},{east});
+      node["public_transport"="platform"]({bbox_str});
+      node["public_transport"="stop_position"]({bbox_str});
     );
     out body;
     """
-    resp = requests.post(OVERPASS_URL, data={"data": query})
+    resp = httpx.get(OVERPASS_URL, params={"data": query})
     resp.raise_for_status()
-    data = resp.json().get("elements", [])
-    for el in data:
+    data = resp.json()
+
+    for elem in data.get("elements", []):
+        tags = elem.get("tags", {})
+        osm_id = elem["id"]
+
+        # Try a few common ways people tag the TriMet stop number
+        raw = (
+            tags.get("ref:trimet")
+            or tags.get("gtfs:stop_id")
+            or tags.get("trimet:stop_id")
+        )
+        trimet_id = None
+        if raw:
+            # extract the leading integer, if any
+            m = re.match(r"^(\d+)", raw)
+            if m:
+                trimet_id = int(m.group(1))
+
         yield StationOut(
-            id=el["id"],
-            name=el.get("tags", {}).get("name", ""),
-            latitude=el.get("lat"),
-            longitude=el.get("lon"),
-            description=el.get("tags", {}).get("description"),
+            id=osm_id,
+            name=tags.get("name", f"Stop {osm_id}"),
+            latitude=elem.get("lat") or elem["center"]["lat"],
+            longitude=elem.get("lon") or elem["center"]["lon"],
+            description=tags.get("description"),
+            trimet_id=trimet_id,
         )
