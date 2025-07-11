@@ -46,6 +46,7 @@ async def get_nearby_stations(
     return [
         Station(
             id=loc["locid"],
+            trimet_id=loc["locid"],
             name=loc["desc"],
             latitude=loc["lat"],
             longitude=loc["lng"],
