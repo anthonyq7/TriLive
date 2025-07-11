@@ -14,12 +14,12 @@ class StationCreate(StationBase):
 
 # what you return on GET /stations and GET /stations/{id}
 class Station(BaseModel):
-    id:         int
-    name:       str
-    latitude:   float
-    longitude:  float
-    description: Optional[str] = None
-    trimet_id:  Optional[int]   = None
+    id: int
+    trimet_id: int | None    
+    name: str
+    latitude: float
+    longitude: float
+    description: str | None
 
     class Config:
         orm_mode = True
