@@ -184,6 +184,7 @@ async def get_stations(
     out = [
         Station.model_validate({
             "id":          s.id,
+            "trimet_id":   s.trimet_id,
             "name":        s.name,
             "latitude":    s.latitude,
             "longitude":   s.longitude,
