@@ -72,26 +72,35 @@ async def import_stations(
     bbox: str | None = Query(None, description="min_lon,min_lat,max_lon,max_lat"),
     db: Session = Depends(get_db),
 ):
+    # clear our cache
     await request.app.state.redis.delete("stations")
 
+    # validate bbox param
     if not bbox:
-        raise HTTPException(400, "bbox is required")
+        raise HTTPException(status_code=400, detail="bbox is required")
     try:
         coords = [float(x) for x in bbox.split(",")]
         if len(coords) != 4:
             raise ValueError
     except ValueError:
-        raise HTTPException(400, "Invalid bbox format; use min_lon,min_lat,max_lon,max_lat")
+        raise HTTPException(status_code=400, detail="Invalid bbox format; use min_lon,min_lat,max_lon,max_lat")
 
+    #Wipe out all existing stations
+    db.query(StationModel).delete()
+    db.commit()
+
+    #Fetch new stations from Overpass
     try:
         stations = parse_overpass(coords)
     except RuntimeError as e:
-        # this will include the Overpass status & body
-        raise HTTPException(502, f"Overpass error: {e}")
+        # include Overpass error in 502
+        raise HTTPException(status_code=502, detail=f"Overpass error: {e}")
 
+    #Insert fresh batch
     for station in stations:
         db.add(StationModel(**station.model_dump()))
     db.commit()
+
     return {"imported": len(stations)}
 
 @router.get("/stations/{id}/arrivals")
