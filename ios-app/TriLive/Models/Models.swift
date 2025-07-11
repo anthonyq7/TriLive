@@ -31,12 +31,17 @@ struct Route: Identifiable, Hashable, Codable {
 
 
 // model representing a transit stop
-struct Stop: Identifiable, Hashable, Codable {
-    let id: Int
-    let name: String
-    let latitude: Double
-    let longitude: Double
-    let description: String?
-    let trimetID: Int?
+struct Stop: Identifiable, Codable, Hashable {
+  let id: Int
+  let name: String
+  let latitude: Double
+  let longitude: Double
+  let description: String?
+  let trimetID: Int?               
+
+  enum CodingKeys: String, CodingKey {
+    case id, name, latitude, longitude, description
+    case trimetID = "trimet_id"
+  }
 }
 
