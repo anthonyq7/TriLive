@@ -1,35 +1,27 @@
-//
-//  Arrival.swift
-//  TriLive
-//
-//  Created by Brian Maina on 7/7/25.
-//
-
 import Foundation
 
 struct Arrival: Identifiable, Decodable {
-    var id: UUID { UUID() }
+
+    var id = UUID()
     let route: Int
-    let name: String
-    let direction: String
     let scheduled: Int
     let estimated: Int?
-    let isMAX: Bool
-}
+    let vehicle: String?
 
-extension Arrival {
-  //Minutes from now until the arrival’s `realTime` value
-  var minutesUntilArrival: Int {
-    let comps = Calendar.current.dateComponents([.hour, .minute], from: Date())
-    let currentMins = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
-    let h = (estimated ?? scheduled) / 100
-    let m = (estimated ?? scheduled) % 100
-    return max(h * 60 + m - currentMins, 0)
+
+  //Convert the Int-ms to a proper Date
+  var scheduledDate: Date {
+    Date(timeIntervalSince1970: Double(scheduled) / 1_000)
+  }
+  var estimatedDate: Date? {
+    guard let est = estimated else { return nil }
+    return Date(timeIntervalSince1970: Double(est) / 1_000)
   }
 
-  //A “3 mins” vs “1 min” friendly string
-  var minutesUntilArrivalString: String {
-    let mins = minutesUntilArrival
-    return "\(mins) min" + (mins == 1 ? "" : "s")
+  /// minutes from now until whichever timestamp is available
+  var minutesUntilArrival: Int {
+    let target = estimatedDate ?? scheduledDate
+    let diff = target.timeIntervalSince(Date())
+    return max(0, Int(diff / 60.0))
   }
 }
