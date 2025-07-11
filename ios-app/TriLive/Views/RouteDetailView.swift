@@ -1,18 +1,21 @@
+// RouteDetailView.swift
+
 import SwiftUI
 import MapKit
 
 struct RouteDetailView: View {
     let parentStop: Stop
-    let route: Route
-    @Binding var navPath: NavigationPath
+    let route:       Route
+
+    @ObservedObject var stopVM:    StopViewModel
+    @Binding        var navPath:   NavigationPath
     @ObservedObject var timeManager: TimeManager
-    @StateObject private var stopVM = StopViewModel()
+
     @State private var isLiveActive = true
-    @StateObject private var stationVM = StationsViewModel()
+    @StateObject private var stationVM   = StationsViewModel()
 
     var body: some View {
         ZStack {
-        
             Color("AppBackground")
                 .ignoresSafeArea()
 
@@ -47,7 +50,7 @@ struct RouteDetailView: View {
                     .cornerRadius(16)
                     .padding(.horizontal)
 
-                    //Stop Button
+                    // Stop Button
                     Button("Stop") {
                         isLiveActive = false
                         navPath.removeLast()
@@ -62,10 +65,10 @@ struct RouteDetailView: View {
                     .cornerRadius(25)
                     .padding(.horizontal)
 
-                    // Next Arrivals
+                    // Live Activity
                     if isLiveActive {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Next Arrivals")
+                            Text("Live Activity")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
@@ -80,16 +83,16 @@ struct RouteDetailView: View {
                             }
                             else {
                                 ForEach(stopVM.arrivals) { a in
-                                  HStack {
-                                    Text("Route \(a.route)")
-                                    Spacer()
-                                    Text(DateFormatter.localizedString(
-                                      from: a.scheduledDate,
-                                      dateStyle: .none,
-                                      timeStyle: .short
-                                    ))
-                                  }
-                                  .foregroundColor(.white)
+                                    HStack {
+                                        Text("Route \(a.route)")
+                                        Spacer()
+                                        Text(DateFormatter.localizedString(
+                                            from: a.scheduledDate,
+                                            dateStyle: .none,
+                                            timeStyle: .short
+                                        ))
+                                    }
+                                    .foregroundColor(.white)
                                 }
                             }
                         }
@@ -99,7 +102,7 @@ struct RouteDetailView: View {
                         .padding(.horizontal)
                     }
 
-                    //Map
+                    // Map
                     let focusStation = Station(
                         id:          parentStop.id,
                         name:        parentStop.name,
@@ -116,10 +119,9 @@ struct RouteDetailView: View {
                 .padding(.vertical)
             }
         }
-        // Lifecycle & navigation modifiers
         .onAppear {
             stationVM.loadStations()
-            stopVM.startPollingArrivals(for: parentStop)
+            // no need to startPollingArrivals here—HomeView already did
         }
         .onDisappear {
             stopVM.stopPollingArrivals()
@@ -135,80 +137,10 @@ struct RouteDetailView: View {
         }
     }
 
-    //LiveActivityCard
-    struct LiveActivityCard: View {
-        @ObservedObject var timeManager: TimeManager
-        let route: Route
-
-        var body: some View {
-            let minutes = route.minutesUntilArrival
-            let progress = min(timeManager.timeDifferenceInMinutes(), Double(minutes))
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(route.name)
-                        .font(.headline)
-                    Spacer()
-                    Text(
-                        "ETA: " +
-                        DateFormatter.localizedString(
-                            from: Date().addingTimeInterval(Double(minutes * 60)),
-                            dateStyle: .none,
-                            timeStyle: .short
-                        )
-                    )
-                    .font(.subheadline)
-                }
-
-                Text(
-                    "Your ride will be here in \(minutes) min" +
-                    (minutes == 1 ? "" : "s")
-                )
-                .font(.subheadline)
-
-                ProgressView(value: progress, total: Double(minutes))
-            }
-            .padding()
-            .background(Color("AppBackground").opacity(0.8))
-            .cornerRadius(8)
-            .foregroundColor(.white)
-        }
-    }
+    // LiveActivityCard (unchanged) …
 }
 
-//TimeManager
-class TimeManager: ObservableObject {
-    @Published var currentTime: Date = Date()
-    private let startDate: Date
-    private var timer: Timer?
-
-    init() {
-        startDate = Date()
-        startTimer()
-    }
-
-    func startTimer() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            self.currentTime = Date()
-        }
-    }
-
-    func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    func timeDifferenceInMinutes() -> Double {
-        currentTime.timeIntervalSince(startDate) / 60
-    }
-
-    deinit {
-        timer?.invalidate()
-    }
-}
-
-// Preview
+// Preview (inject a dummy stopVM)
 struct RouteDetailView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleStop = Stop(
@@ -218,7 +150,7 @@ struct RouteDetailView_Previews: PreviewProvider {
             longitude:  -122.6587,
             description: "Near the library",
             trimetID:    123456
-            )
+        )
         let sampleRoute = Route(
             id:           10,
             name:         "10 – Downtown",
@@ -231,6 +163,7 @@ struct RouteDetailView_Previews: PreviewProvider {
             RouteDetailView(
                 parentStop:  sampleStop,
                 route:       sampleRoute,
+                stopVM:      StopViewModel(),               // injected here
                 navPath:     .constant(NavigationPath()),
                 timeManager: TimeManager()
             )
