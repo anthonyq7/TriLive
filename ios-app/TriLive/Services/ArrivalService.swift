@@ -21,9 +21,20 @@ final class ArrivalService {
 
   func fetchArrivals(
     for stopID: Int,
+    limit: Int = 5,
+    minutes: Int = 60,
     completion: @escaping (Result<[Arrival], Error>) -> Void
   ) {
-    let url = baseURL.appendingPathComponent("stations/\(stopID)/arrivals")
+    let endpoint = baseURL.appendingPathComponent("stations/\(stopID)/arrivals")
+    var comps = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
+    comps.queryItems = [
+      URLQueryItem(name: "limit",   value: String(limit)),
+      URLQueryItem(name: "minutes", value: String(minutes))
+    ]
+    guard let url = comps.url else {
+      return completion(.failure(URLError(.badURL)))
+    }
+
     URLSession.shared.dataTask(with: url) { data, resp, err in
       if let err = err { return completion(.failure(err)) }
       guard let data = data else {

@@ -32,7 +32,6 @@ struct MainTabView: View {
                     favoriteRouteIDs: $favoriteRouteIDs,
                     navPath:          $navigationPath,
                     timeManager:      timeManager,
-                    stopVM:           stopVM
                 )
             }
             .tabItem { Label("Favorites", systemImage: "star.fill") }

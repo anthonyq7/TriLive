@@ -6,53 +6,51 @@ struct RouteDetailView: View {
     let route: Route
     @Binding var navPath: NavigationPath
     @ObservedObject var timeManager: TimeManager
-    @ObservedObject var stopVM: StopViewModel
-
+    @StateObject private var stopVM = StopViewModel()
     @State private var isLiveActive = true
     @StateObject private var stationVM = StationsViewModel()
 
     var body: some View {
         ZStack {
-            // your grey app background from Assets
+        
             Color("AppBackground")
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
-                    //header
+                    // MARK: Header
                     HStack(spacing: 16) {
-                        // route badge / "logo"
                         Circle()
                             .fill(route.isMAX ? Color.blue : Color.green)
                             .frame(width: 48, height: 48)
                             .overlay(
-                              Text(route.isMAX ? "MAX" : "\(route.id)")
-                                .font(.headline)
-                                .foregroundColor(.white)
+                                Text(route.isMAX ? "MAX" : "\(route.id)")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
                             )
 
-                          VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(route.name)
-                              .font(.title2)
-                              .fontWeight(.bold)
-                              .foregroundColor(.white)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
 
                             Text("Stop: \(parentStop.name)")
-                              .font(.subheadline)
-                              .foregroundColor(.white.opacity(0.7))
-                          }
-
-                          Spacer()
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.7))
                         }
-                        .padding()
-                        .background(Color("AppBackground").opacity(0.5))
-                        .cornerRadius(16)
-                        .padding(.horizontal)
 
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color("AppBackground").opacity(0.5))
+                    .cornerRadius(16)
+                    .padding(.horizontal)
+
+                    //Stop Button
                     Button("Stop") {
                         isLiveActive = false
                         navPath.removeLast()
-                        // stops fetching times
                         stopVM.stopPollingArrivals()
                         timeManager.stopTimer()
                     }
@@ -64,23 +62,48 @@ struct RouteDetailView: View {
                     .cornerRadius(25)
                     .padding(.horizontal)
 
-                    //live activiity
+                    // Next Arrivals
                     if isLiveActive {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Live Activity In-Progress")
+                            Text("Next Arrivals")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
 
-                            LiveActivityCard(timeManager: timeManager, route: route)
+                            if stopVM.isLoadingArrivals {
+                                ProgressView()
+                                    .foregroundColor(.white)
+                            }
+                            else if stopVM.showArrivalsError {
+                                Text(stopVM.arrivalsErrorMessage ?? "Failed to load")
+                                    .foregroundColor(.red)
+                            }
+                            else {
+                                ForEach(stopVM.arrivals) { a in
+                                    HStack {
+                                        Text("Route \(a.route)")
+                                        Spacer()
+                                        let date = Date(timeIntervalSince1970: Double(a.scheduled) / 1000)
+                                        Text(
+                                            DateFormatter
+                                                .localizedString(
+                                                    from: date,
+                                                    dateStyle: .none,
+                                                    timeStyle: .short
+                                                )
+                                        )
+                                    }
+                                    .foregroundColor(.white)
+                                }
+                            }
                         }
                         .padding(20)
-                        .background(Color(.black).opacity(0.5))
+                        .background(Color.black.opacity(0.5))
                         .cornerRadius(12)
                         .padding(.horizontal)
                     }
 
-                    //map
+                    //Map
                     let focusStation = Station(
                         id:          parentStop.id,
                         name:        parentStop.name,
@@ -93,25 +116,30 @@ struct RouteDetailView: View {
                         .frame(height: 200)
                         .cornerRadius(12)
                         .padding(.horizontal, 24)
-                        .onAppear { stationVM.loadStations() }
                 }
                 .padding(.vertical)
             }
         }
+        // Lifecycle & navigation modifiers
+        .onAppear {
+            stationVM.loadStations()
+            stopVM.startPollingArrivals(for: parentStop)
+        }
+        .onDisappear {
+            stopVM.stopPollingArrivals()
+        }
         .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-              // principal = the centered title area
-              ToolbarItem(placement: .principal) {
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
                 Text("Route Details")
-                  .font(.headline)
-                  .foregroundColor(.white)
-              }
+                    .font(.headline)
+                    .foregroundColor(.white)
             }
+        }
     }
 
-    //Live Activity Card
-
+    //LiveActivityCard
     struct LiveActivityCard: View {
         @ObservedObject var timeManager: TimeManager
         let route: Route
@@ -125,16 +153,22 @@ struct RouteDetailView: View {
                     Text(route.name)
                         .font(.headline)
                     Spacer()
-                    Text("ETA: " + DateFormatter.localizedString(
-                        from: Date().addingTimeInterval(Double(minutes * 60)),
-                        dateStyle: .none,
-                        timeStyle: .short
-                    ))
+                    Text(
+                        "ETA: " +
+                        DateFormatter.localizedString(
+                            from: Date().addingTimeInterval(Double(minutes * 60)),
+                            dateStyle: .none,
+                            timeStyle: .short
+                        )
+                    )
                     .font(.subheadline)
                 }
 
-                Text("Your ride will be here in \(minutes) min\(minutes == 1 ? "" : "s")")
-                    .font(.subheadline)
+                Text(
+                    "Your ride will be here in \(minutes) min" +
+                    (minutes == 1 ? "" : "s")
+                )
+                .font(.subheadline)
 
                 ProgressView(value: progress, total: Double(minutes))
             }
@@ -147,7 +181,6 @@ struct RouteDetailView: View {
 }
 
 //TimeManager
-
 class TimeManager: ObservableObject {
     @Published var currentTime: Date = Date()
     private let startDate: Date
@@ -158,7 +191,6 @@ class TimeManager: ObservableObject {
         startTimer()
     }
 
-    //starts the per-second clock
     func startTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -166,13 +198,11 @@ class TimeManager: ObservableObject {
         }
     }
 
-    //stops the clock
     func stopTimer() {
         timer?.invalidate()
         timer = nil
     }
 
-    //difference between now and the moment this manager was created
     func timeDifferenceInMinutes() -> Double {
         currentTime.timeIntervalSince(startDate) / 60
     }
@@ -182,8 +212,7 @@ class TimeManager: ObservableObject {
     }
 }
 
-//Preview
-
+// Preview
 struct RouteDetailView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleStop = Stop(
@@ -195,7 +224,7 @@ struct RouteDetailView_Previews: PreviewProvider {
         )
         let sampleRoute = Route(
             id: 10,
-            name: "10 – Downtown", 
+            name: "10 – Downtown",
             arrivalTime: Int(Date().timeIntervalSince1970) + 300,
             direction: "Northbound",
             realTime: Int(Date().timeIntervalSince1970) + 300,
@@ -206,8 +235,7 @@ struct RouteDetailView_Previews: PreviewProvider {
                 parentStop:  sampleStop,
                 route:       sampleRoute,
                 navPath:     .constant(NavigationPath()),
-                timeManager: TimeManager(),
-                stopVM: StopViewModel()
+                timeManager: TimeManager()
             )
         }
         .previewLayout(.sizeThatFits)
