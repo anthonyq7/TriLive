@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
+from sqlalchemy import delete
+import anyio
 
 import os
 import datetime
@@ -16,6 +18,7 @@ from . import models, database
 from .scheduler import scheduler
 from .routers.station import router as station_router
 from .clients import redis_client
+from . import database
 
 #track request, and check if favorite can be tracked
 load_dotenv()
@@ -164,24 +167,40 @@ async def fetch_stops():
 
 async def sync_stop_table():
     stops = await fetch_stops()
-    current_ids = {s.stop_id for s in stops}
+    # run the blocking DB sync on a thread
+    await anyio.to_thread.run_sync(_sync_stops, stops)
+
+def _sync_stops(stops):
+    ids = [s.stop_id for s in stops]
     db = database.SessionLocal()
     try:
-        for stop in stops:
-            entry = db.query(database.Stop).filter(database.Stop.id == stop.stop_id).first()
-            if not entry:
-                new_entry = database.Stop(
-                    id=stop.stop_id,
-                    name=stop.name,
-                    lat=stop.lat,
-                    lon=stop.lon
-                )
-                db.add(new_entry)
-        
-        if current_ids:
-            db.query(database.Stop).filter(~database.Stop.id.in_(current_ids)).delete(synchronize_session=False)
-        
+
+        existing_ids = {
+            stop_id
+            for (stop_id,) in (
+                db
+                .query(database.Stop.id)
+                .filter(database.Stop.id.in_(ids))
+                .all()
+            )
+        }
+
+        new_rows = [
+            {"id": s.stop_id, "name": s.name, "lat": s.lat, "lon": s.lon}
+            for s in stops
+            if s.stop_id not in existing_ids
+        ]
+        if new_rows:
+            db.bulk_insert_mappings(database.Stop, new_rows)
+
+        if ids:
+            db.execute(
+                delete(database.Stop)
+                .where(database.Stop.id.notin_(ids))
+            )
+
         db.commit()
+
     finally:
         db.close()
 

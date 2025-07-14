@@ -7,6 +7,7 @@ from ..database import SessionLocal, Stop as StationModel
 from ..models import Station
 from ..utils.overpass import parse_overpass
 from ..clients import redis_client
+from ..database import Stop
 
 router = APIRouter()
 TRIMET_APP_ID = os.getenv("TRIMET_APP_ID")
@@ -109,4 +110,10 @@ async def import_stations(
     db.commit()
 
     return {"imported": len(stations)}
+
+@router.get("/stations/{stop_id}", response_model=Station)
+def read_station(stop_id: int, db=Depends(get_db)):
+    db_stop = db.query(Stop).get(stop_id)
+    return db_stop   
+
 
