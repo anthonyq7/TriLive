@@ -1,11 +1,18 @@
 from pydantic import BaseModel
 
+class Route(BaseModel):
+    stop_id: int #parent stop id here
+    route_id: int
+    route_name: str
+    status: str
+    eta: str
+    routeColor: str
+
 class Station(BaseModel):
-    id: int
+    stop_id: int
     name: str
-    address: str
-    latitude: float
-    longitude: float
-
-
+    dir: str
+    lon: float
+    lat: float
+    dist: int
 

@@ -8,6 +8,7 @@ build/
 .build/
 backend/.venv/
 backend/__pycache__/
+backend_archived/
 *.py[cod]
 backend/.pytest_cache/
 .DS_Store

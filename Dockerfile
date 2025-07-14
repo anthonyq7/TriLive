@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# Install build deps for psycopg2
+# Installs build deps for psycopg2
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -8,18 +8,19 @@ RUN apt-get update && \
         python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+#Switches to the backend folder
+WORKDIR /app/backend
 
-# Install Python dependencies
-COPY requirements.txt .
+#Copy & install only your unified deps
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 1) Bring in all your code
-COPY backend ./backend
+#Copy in your ant's FastAPI app
+COPY backend/app ./app
 
-# 2) EXPOSE the default (optional, for docs)
+#Expose the port
 EXPOSE 8000
 
-# 3) Run via sh -c so $PORT is expanded
+#Launch with gunicorn + UvicornWorker (so $PORT gets expanded)
 ENTRYPOINT ["sh","-c"]
-CMD ["exec gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app --bind 0.0.0.0:${PORT:-8000}"]
+CMD ["exec gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:${PORT:-8000}"]
