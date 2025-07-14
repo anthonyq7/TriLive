@@ -130,34 +130,35 @@ def timeConvert(ms_timestamp: int):
     return dt.strftime("%-I:%M %p")
 
 async def fetch_stops():
-    url =(f"https://developer.trimet.org/ws/v2/stops"f"?appID={TRIMET_APP_ID}"f"&bbox=-122.836,45.387,-122.471,45.608"f"&json=true")
-    
+    url = (
+        f"https://developer.trimet.org/ws/v2/stops"
+        f"?appID={TRIMET_APP_ID}"
+        f"&bbox=-122.836,45.387,-122.471,45.608"
+        f"&maxStops=5000"
+        f"&json=true"
+    )
 
     try:
-        response = await client.get(url)
-        response.raise_for_status()
-        data = response.json()
+        resp = await client.get(url)
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    stops_db = []
 
-    for stop in data.get("resultSet", {}).get("location", []):
-        stop_id = stop.get("locid", -1)
-        dir = stop.get("dir", "")
-        new_station = models.Station(
-            stop_id=stop_id,
-            name=stop.get("desc", ""),
-            dir=dir,
-            lon=stop.get("lng", -1.0),
-            lat=stop.get("lat", -1.0),
-            dist=stop.get("metersDistance", 10000)
+    stops = []
+    for loc in data.get("resultSet", {}).get("location", []):
+        stops.append(
+            models.Station(
+                stop_id=loc["locid"],
+                name=loc["desc"],
+                dir=loc.get("dir",""),
+                lon=loc["lng"],
+                lat=loc["lat"],
+                dist=loc.get("metersDistance", 0),
+            )
         )
+    return stops
 
-        stops_db.append(new_station)
-
-    
-    return stops_db 
 
 async def sync_stop_table():
     stops = await fetch_stops()
