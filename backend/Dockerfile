@@ -20,7 +20,5 @@ COPY app ./app
 EXPOSE 8000
 
 
-CMD exec gunicorn \
-    -k uvicorn.workers.UvicornWorker \
-    app.main:app \
-    --bind "0.0.0.0:${PORT:-8000}"
+ENTRYPOINT ["sh","-c"]
+CMD ["exec gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app --bind 0.0.0.0:${PORT:-8000}"]
