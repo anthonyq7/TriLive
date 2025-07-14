@@ -15,6 +15,7 @@ import redis
 from . import models, database
 from .scheduler import scheduler
 from .routers.station import router as station_router
+from .clients import redis_client
 
 #track request, and check if favorite can be tracked
 load_dotenv()
