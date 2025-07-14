@@ -1,78 +1,294 @@
-# main.py
-import os
-import asyncio
-import json
-from typing import Dict, List
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-import redis.asyncio as redis
-from sqlalchemy.orm import Session
+import os
+import datetime
+import json
+import asyncio
+import zoneinfo
 
-from backend.app.db.database import Base, engine, SessionLocal
-from backend.app.models.station import StationModel
-from backend.app.routers import station
-from backend.app.utils.trimet import fetch_arrivals
+import httpx
+import redis
 
-# in-memory cache for arrivals
-_arrivals_cache: Dict[int, List[dict]] = {}
+# now import your modules _inside_ the app package:
+from . import models, database
+from .scheduler import scheduler
 
+#track request, and check if favorite can be tracked
+load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1) Connect to your Redis (using REDIS_URL from Render)
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    app.state.redis = await redis.from_url(redis_url, decode_responses=True)
+    scheduler.add_job(sync_stop_table, trigger="cron", day=1, hour=0, minute=0, misfire_grace_time=3600, coalesce=True, id="monthly_stop_sync")
+    scheduler.start()
+    yield
+    scheduler.shutdown()
 
-    # 2) Wire up our in-memory arrivals cache
-    app.state.arrivals_cache = _arrivals_cache
+app = FastAPI(lifespan=lifespan)
+TRIMET_APP_ID=os.getenv("TRIMET_APP_ID")
+if not TRIMET_APP_ID:
+    raise RuntimeError("TRIMET_APP_ID is not set!")
 
-    # 3) Ensure your database tables exist
-    Base.metadata.create_all(bind=engine)
+client = httpx.AsyncClient()
+#database.Base.metadata.drop_all(bind=database.engine)
+database.Base.metadata.create_all(bind=database.engine)
+REDIS_URL=os.getenv("REDIS_URL")
+redis_client = redis.from_url(REDIS_URL)
 
-    # 4) Kick off the background refresher (don’t await—let it run on its own)
-    asyncio.create_task(refresh_arrivals_loop(30))
+longitude= -122.6765
+latitude = 45.5231
 
-    yield  # <-- everything above runs at startup
+@app.get("/")
+async def root():
+    return {"message" : "Welcome to TriLive!"}
 
-    await app.state.redis.close()
+#returns arrivals follwing the route pyndantic models
+@app.get("/arrivals/{stop_id}")
+async def get_arrivals(stop_id: int):
+    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&showPosition=true&minutes=60"
+    cache_key = f"stop:{stop_id}:arrivals"
+    cached_data = redis_client.get(cache_key)
+    
+    if cached_data:
+        data_json = cached_data.decode('utf-8')
+        return json.loads(data_json)
+
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    arrivals_db = {}
+
+    for arrival in data.get("resultSet", {}).get("arrival", []):
+        status = arrival.get("status", "") 
+        if status in ["estimated", "scheduled"]: #checks to make sure route will occur (not delayed or cancelled)
+            eta = arrival.get("estimated") or arrival.get("scheduled")
+            converted_eta = timeConvert(eta) #converts from unix ms to HR:MIN AM or PM
+            new_route = models.Route(
+                stop_id=stop_id,
+                route_id=arrival.get("route"),
+                route_name=arrival.get("fullSign") or arrival.get("shortSign") or "",
+                status=status,
+                eta=converted_eta,
+                routeColor=arrival.get("routeColor", "")
+            )
+            arrivals_db[str(new_route.route_id) + ":" + str(eta)] = new_route.model_dump()
+    
+    redis_client.setex(cache_key, 60, json.dumps(arrivals_db))    
+    return arrivals_db # -> {k:v.dict() for k, v in arrivals_db.items()}
+
+@app.get("/stops")
+async def get_stops():
+    db = database.SessionLocal()
+    try:
+        toReturn = db.query(database.Stop).all()
+        return toReturn
+    finally:
+        db.close()
+    
+@app.get("/stops/closest/{latitude}/{longitude}", response_model=models.Station) #gets closest stop
+async def get_closest_stop(longitude: float, latitude: float):
+    radius = 4800 #radius of 4.8 km or roughly 3 miles
+    url = f"https://developer.trimet.org/ws/V2/stops?appID={TRIMET_APP_ID}&ll={longitude},{latitude}&meters={radius}&maxStops=1&json=true"
+
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+        data  = response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    try:
+        stop = data.get("resultSet", {}).get("location", [])[0]
+        stop_id = stop.get("locid", -1)
+        dir = stop.get("dir", "")
+        new_station = models.Station(
+            stop_id=stop_id,
+            name=stop.get("desc", ""),
+            dir=dir,
+            lon=stop.get("lng", -1.0),
+            lat=stop.get("lat", -1.0),
+            dist=stop.get("metersDistance", 10000)
+        )
+        return new_station
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+def timeConvert(ms_timestamp: int):
+    # Convert milliseconds to seconds for fromtimestamp()
+    pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+    dt = datetime.datetime.fromtimestamp(ms_timestamp / 1000, tz=pacific)
+    # %-I is hour without leading zero (on Unix); %M is minutes; %p is AM/PM
+    return dt.strftime("%-I:%M %p")
+
+async def fetch_stops():
+    url = f"https://developer.trimet.org/ws/V1/stops?appID={TRIMET_APP_ID}&bbox=-122.836,45.387,-122.471,45.608&json=true"
+
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    stops_db = []
+
+    for stop in data.get("resultSet", {}).get("location", []):
+        stop_id = stop.get("locid", -1)
+        dir = stop.get("dir", "")
+        new_station = models.Station(
+            stop_id=stop_id,
+            name=stop.get("desc", ""),
+            dir=dir,
+            lon=stop.get("lng", -1.0),
+            lat=stop.get("lat", -1.0),
+            dist=stop.get("metersDistance", 10000)
+        )
+
+        stops_db.append(new_station)
+
+    
+    return stops_db 
+
+async def sync_stop_table():
+    stops = await fetch_stops()
+    current_ids = {s.stop_id for s in stops}
+    db = database.SessionLocal()
+    try:
+        for stop in stops:
+            entry = db.query(database.Stop).filter(database.Stop.id == stop.stop_id).first()
+            if not entry:
+                new_entry = database.Stop(
+                    id=stop.stop_id,
+                    name=stop.name,
+                    lat=stop.lat,
+                    lon=stop.lon
+                )
+                db.add(new_entry)
+        
+        if current_ids:
+            db.query(database.Stop).filter(~database.Stop.id.in_(current_ids)).delete(synchronize_session=False)
+        
+        db.commit()
+    finally:
+        db.close()
 
 
-async def refresh_arrivals_loop(interval_s: int = 60):
+@app.put("/sync_stops")
+async def sync_stops():
+    try:
+        await sync_stop_table()
+        return {"message": "Stops successfully synced"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/track/{stop_id}/{route_id}")
+async def track(ws: WebSocket, stop_id: int, route_id: int):
+    await ws.accept()
+
+    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
+    
+    try:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        await ws.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    arrival = next(
+        (a for a in data.get("resultSet", {}).get("blockPosition", [])
+        if a.get("routeNumber") == route_id),
+        None
+    )
+
+    if not arrival:
+        await ws.send_json({"error": "route not available within the next hour"})
+        await ws.close()
+        return
+
+    try:
+        while True:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+
+            arrival = next(
+                (a for a in data.get("resultSet", {}).get("blockPosition", [])
+                if a.get("routeNumber") == route_id),
+                None
+            )
+
+            if not arrival:
+                await ws.send_json({"error": "route lost"})
+                break
+
+            feet = arrival.get("feet", 0)
+            await ws.send_json({"distance": feet})
+
+            if feet <= 10:
+                await ws.send_json({"message: arrived"})
+                break
+
+            await asyncio.sleep(30)
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await ws.close()
+
+
+
+"""
+@app.get("/stops")
+async def get_stops():
+    url = f"https://developer.trimet.org/ws/V1/stops?appID={TRIMET_APP_ID}&bbox=-122.836,45.387,-122.471,45.608&json=true"
+
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+        data  = response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    stops_db = {}
+
+    for stop in data.get("resultSet", {}).get("location", []):
+        stop_id = stop.get("locid", -1)
+        dir = stop.get("dir", "")
+        new_station = models.Station(
+            stop_id=stop_id,
+            name=stop.get("desc", ""),
+            dir=dir,
+            long=stop.get("lng", -1.0),
+            lat=stop.get("lat", -1.0),
+            dist=stop.get("metersDistance", 10000)
+        )
+
+        stops_db[str(stop_id) + ":" + dir] = new_station.model_dump()
+
+    
+    return stops_db 
+
+@app.post("/favorites")
+async def post_favorites(stop_id: int, route_id: int, route_name: str):
+    db = database.SessionLocal()
+    fav_entry = db.query(database.Favorite).filter(database.Favorite.stop_id == stop_id, database.Favorite.route_id == route_id).first()
+    if not fav_entry:
+        new_fav = database.Favorite(stop_id=stop_id, route_id=route_id, route_name=route_name)
+        db.add(new_fav)
+        db.commit()
+    db.close()
+
+@app.get("/favorites")
+async def get_favorites():
+    db = database.SessionLocal()
+    try:
+        toReturn = db.query(database.Favorite).all()
+        return toReturn
+    finally:
+        db.close()
     """
-    Every `interval_s` seconds, re-fetch arrivals for
-    every station in your DB and store them in app.state.arrivals_cache.
-    """
-    # initial delay so we don’t block startup
-    await asyncio.sleep(interval_s)
-
-    while True:
-        # open a new DB session
-        db: Session = SessionLocal()
-        try:
-            # grab all station IDs
-            stops = [sid for (sid,) in db.query(StationModel.id).all()]
-
-            # kick off all arrival‐fetches in parallel
-            coros = [fetch_arrivals(sid) for sid in stops]
-            results = await asyncio.gather(*coros, return_exceptions=True)
-
-            # stash successful results into the in‐memory cache
-            for (sid,), res in zip(stops, results):
-                if not isinstance(res, Exception):
-                    app.state.arrivals_cache[sid] = res
-
-        finally:
-            db.close()
-
-        # wait before the next cycle
-        await asyncio.sleep(interval_s)
-
-# Attach our lifespan handler
-app = FastAPI(lifespan=lifespan, debug=True)
-
-@app.get("/ping")
-async def ping():
-    return {"pong": True}
-
-# mount your router exactly as before
-app.include_router(station.router)

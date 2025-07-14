@@ -1,8 +1,8 @@
-# Include any files or directories that you don't want to be copied to your
+# Include any files or directories that we don't want to be copied to our
 # container here (e.g., local build artifacts, temporary files, etc.).
-#
-# For more help, visit the .dockerignore file reference guide at
-# https://docs.docker.com/go/build-context-dockerignore/
+
+# Exclude archived backend
+backend_archived/
 
 **/.DS_Store
 **/__pycache__
@@ -22,6 +22,9 @@
 **/*.jfm
 **/bin
 **/charts
+**/__pycache__/
+.vscode/
+.idea/
 **/docker-compose*
 **/compose.y*ml
 **/Dockerfile*

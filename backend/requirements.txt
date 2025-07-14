@@ -1,0 +1,30 @@
+#core dependencies
+fastapi==0.115.14
+uvicorn==0.35.0
+sqlalchemy==2.0.41
+psycopg2-binary==2.9.10
+redis==6.2.0
+python-dotenv==1.1.1
+httpx==0.28.1
+
+#from ant's file
+APScheduler==3.11.0
+annotated-types==0.7.0
+anyio==4.9.0
+pydantic==2.11.7
+pydantic_core==2.33.2
+starlette==0.46.2
+sniffio==1.3.1
+httpcore==1.0.9
+h11==0.16.0
+idna==3.10
+certifi==2025.6.15
+sniffio==1.3.1
+click==8.2.1
+typing-inspection==0.4.1
+typing_extensions==4.14.0
+tzlocal==5.3.1
+
+#from old backend
+gunicorn==21.2.0
+requests>=2.31.0
