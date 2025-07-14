@@ -6,7 +6,7 @@ import os
 from ..database import SessionLocal, Stop as StationModel
 from ..models import Station
 from ..utils.overpass import parse_overpass
-from ..main         import redis_client 
+from ..clients import redis_client
 
 router = APIRouter()
 TRIMET_APP_ID = os.getenv("TRIMET_APP_ID")
