@@ -5,7 +5,6 @@ RUN apt-get update && apt-get install -y build-essential libpq-dev python3-dev \
 
 WORKDIR /app
 
-# these paths are relative to the *root* of your git checkout
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
