@@ -38,6 +38,10 @@ redis_client = redis.from_url(REDIS_URL)
 longitude= -122.6765
 latitude = 45.5231
 
+@app.get("/ping")
+async def ping():
+    return {"status": "ok"}
+
 @app.get("/")
 async def root():
     return {"message" : "Welcome to TriLive!"}
