@@ -14,6 +14,7 @@ import redis
 # now import your modules _inside_ the app package:
 from . import models, database
 from .scheduler import scheduler
+from .routers.station import router as station_router
 
 #track request, and check if favorite can be tracked
 load_dotenv()
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI):
     yield
     scheduler.shutdown()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, debug=True)
 TRIMET_APP_ID=os.getenv("TRIMET_APP_ID")
 if not TRIMET_APP_ID:
     raise RuntimeError("TRIMET_APP_ID is not set!")
@@ -243,6 +244,9 @@ async def track(ws: WebSocket, stop_id: int, route_id: int):
         pass
     finally:
         await ws.close()
+
+#added my routers from the previous backend
+app.include_router(station_router)
 
 
 
