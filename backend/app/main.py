@@ -20,6 +20,7 @@ from .routers.station import router as station_router
 load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await sync_stop_table()
     scheduler.add_job(sync_stop_table, trigger="cron", day=1, hour=0, minute=0, misfire_grace_time=3600, coalesce=True, id="monthly_stop_sync")
     scheduler.start()
     yield

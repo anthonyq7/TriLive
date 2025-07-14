@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from sqlalchemy.orm import Session
 from typing import List
 import os
 
 from ..database import SessionLocal, Stop as StationModel
 from ..models import Station
+from ..utils.overpass import parse_overpass #type: ignore
+from ..main         import redis_client 
 
 router = APIRouter()
 TRIMET_APP_ID = os.getenv("TRIMET_APP_ID")
@@ -73,3 +75,38 @@ async def delete_station(stop_id: int, db: Session = Depends(get_db)):
     db.delete(s)
     db.commit()
     return {"message": "Station deleted"}
+
+@router.post("/stations/import", tags=["admin"])
+async def import_stations(
+    request: Request,
+    bbox: str = Query(..., description="min_lon,min_lat,max_lon,max_lat"),
+    db: Session = Depends(get_db),
+):
+    # clear cache
+    redis_client.delete("stations")
+
+    # validate bbox
+    try:
+        coords = [float(x) for x in bbox.split(",")]
+        if len(coords) != 4:
+            raise ValueError
+    except ValueError:
+        raise HTTPException(400, "Invalid bbox; use min_lon,min_lat,max_lon,max_lat")
+
+    # wipe old data
+    db.query(StationModel).delete()
+    db.commit()
+
+    # fetch fresh from Overpass
+    try:
+        stations = await parse_overpass(coords)
+    except Exception as e:
+        raise HTTPException(502, f"Overpass error: {e}")
+
+    # insert new ones
+    for s in stations:
+        db.add(StationModel(**s))
+    db.commit()
+
+    return {"imported": len(stations)}
+
