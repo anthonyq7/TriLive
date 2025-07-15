@@ -11,6 +11,7 @@ struct SearchBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            //Text field + search icon
             HStack {
                 TextField("Enter a stop", text: $searchQuery)
                     .focused(isFocused)
@@ -29,11 +30,11 @@ struct SearchBar: View {
             }
             .padding(.horizontal)
 
-            // dropdown only when focused and we have results
+            //Dropdown
             if isFocused.wrappedValue && !stopList.isEmpty {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0) {
-                        // current-location row
+
                         HStack {
                             Text("Use Current Location")
                             Spacer()
@@ -44,11 +45,11 @@ struct SearchBar: View {
                         .background(Color(.systemBackground))
                         .onTapGesture {
                             isFocused.wrappedValue = false
-                            // handle actual location pick…
+                            selectNearestStop()
                         }
                         Divider()
 
-                        // your stops
+
                         ForEach(stopList) { stop in
                             Text(stop.name)
                                 .padding(12)
@@ -70,18 +71,42 @@ struct SearchBar: View {
         }
     }
 
+    //Tap the magnifying glass or hit return
     private func performSearch() {
         if let match = stopList.first(where: {
-            $0.name.localizedCaseInsensitiveContains(searchQuery)
-            || "\($0.id)".hasPrefix(searchQuery)
+            $0.name.localizedCaseInsensitiveContains(searchQuery) ||
+            "\($0.id)".hasPrefix(searchQuery)
         }) {
             select(match)
         }
     }
 
+    //When a stop row is tapped
     private func select(_ stop: Stop) {
-        searchQuery = stop.name
+        searchQuery   = stop.name
         selectedStop  = stop
+        stopSelected  = true
+        isFocused.wrappedValue = false
+    }
+
+
+    private func selectNearestStop() {
+        //grabs the user’s coordinate
+        guard let coord = locationManager.location else { return }
+        //wraps it in a CLLocation so we can measure distance
+        let userLoc = CLLocation(latitude: coord.latitude,
+                                 longitude: coord.longitude)
+
+        //finds the nearest stop by comparing distances
+        guard let nearest = stopList.min(by: { s1, s2 in
+            let loc1 = CLLocation(latitude: s1.lat, longitude: s1.lon)
+            let loc2 = CLLocation(latitude: s2.lat, longitude: s2.lon)
+            return userLoc.distance(from: loc1) < userLoc.distance(from: loc2)
+        }) else { return }
+
+        //selects it
+        searchQuery   = nearest.name
+        selectedStop  = nearest
         stopSelected  = true
         isFocused.wrappedValue = false
     }

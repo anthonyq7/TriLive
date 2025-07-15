@@ -3,95 +3,107 @@
 import Foundation
 import Combine
 
+@MainActor
 final class StopViewModel: ObservableObject {
-    @Published var allStops: [Stop] = []
-    @Published var filteredStops: [Stop] = []
-    @Published var selectedStop: Stop?
-
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String?
-    @Published var showError: Bool = false
-
-    @Published var arrivals: [Arrival] = []
-    @Published var isLoadingArrivals = false
-    @Published var showArrivalsError = false
+    // Stops
+    @Published var allStops      : [Stop]  = []
+    @Published var filteredStops : [Stop]  = []
+    @Published var selectedStop  : Stop?
+    
+    // Arrivals & Routes
+    @Published var arrivals            : [Arrival] = []
+    @Published var routes              : [Route]   = []
+    @Published var isLoadingArrivals   = false
+    @Published var showArrivalsError   = false
     @Published var arrivalsErrorMessage: String?
+    
+    // Generic State
+    @Published var isLoading   = false
+    @Published var showError   = false
+    @Published var errorMessage: String?
+    
+    private let api = APIClient()
+    private var timer: AnyCancellable?
+    
+    func loadStops() async {
+      isLoading      = true
+      showError      = false
+      errorMessage   = nil
 
-    private let stopService: StopService
-    private var arrivalsPollCancellable: AnyCancellable?    //for polling
+      do {
+        let stops = try await api.fetchStops()
+        allStops       = stops
+        filteredStops  = stops
+      } catch {
+        errorMessage = error.localizedDescription
+        showError    = true
+      }
 
-    init(service: StopService = .shared) {
-        self.stopService = service
+      isLoading = false
     }
 
-    //the existing one-time load
-    func loadArrivals(for stop: Stop) {
-        isLoadingArrivals = true
-        showArrivalsError = false
-
-        ArrivalService.shared.fetchArrivals(for: stop.id) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoadingArrivals = false
-                switch result {
-                case .success(let arr):   self?.arrivals = arr
-                case .failure(let err):
-                    self?.arrivalsErrorMessage = err.localizedDescription
-                    self?.showArrivalsError   = true
-                }
-            }
+    //Filter the list of stops
+    func filter(_ q: String) {
+      if q.isEmpty {
+        filteredStops = allStops
+      } else {
+        filteredStops = allStops.filter {
+          $0.name.localizedCaseInsensitiveContains(q)
         }
+      }
     }
 
-    //Calls this to start continuous polling
-    func startPollingArrivals(for stop: Stop, every interval: TimeInterval = 30) {
-        //cancel any previous
-        arrivalsPollCancellable?.cancel()
-        //immediate first load
-        loadArrivals(for: stop)
-        //then repeat on a timer
-        arrivalsPollCancellable = Timer
-            .publish(every: interval, on: .main, in: .common)
+    func loadArrivals(for stop: Stop) async {
+      print(" Fetching arrivals for stopID = \(stop.id)")
+      isLoadingArrivals = true
+      showArrivalsError = false
+
+      do {
+        let raw = try await api.fetchArrivals(for: stop.id)
+        print(" Raw arrivals JSON decoded: \(raw.count) items")
+
+        // … collapse into earliestPerRoute / build routes …
+        self.arrivals = raw
+        let earliestPerRoute = Dictionary(grouping: raw, by: \.routeId)
+          .compactMap { _, arrs in arrs.min(by: { $0.arrivalDate < $1.arrivalDate }) }
+
+        self.routes = earliestPerRoute
+          .sorted(by: { $0.arrivalDate < $1.arrivalDate })
+          .map { a in
+            Route(
+              stopId:     stop.id,
+              routeId:    a.routeId,
+              routeName:  a.routeName,
+              status:     a.status,
+              eta:        "\(a.minutesUntilArrival)",
+              routeColor: a.routeColor
+            )
+          }
+          print("[DEBUG] routes.count = \(self.routes.count); ids = \(self.routes.map(\.routeId))")
+        print(" routes built: \(self.routes.count)")
+      } catch {
+        print("loadArrivals error: \(error)")
+        showArrivalsError = true
+        arrivals = []
+        routes   = []
+      }
+
+      isLoadingArrivals = false
+    }
+    
+    func startPollingArrivals(for stop: Stop) {
+        timer?.cancel()
+        Task { await loadArrivals(for: stop) }
+        timer = Timer
+            .publish(every: 30, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.loadArrivals(for: stop)
+                Task { await self?.loadArrivals(for: stop) }
             }
     }
-
-    //Call this to stop polling (e.g. when leaving screen)
+    
     func stopPollingArrivals() {
-        arrivalsPollCancellable?.cancel()
-        arrivalsPollCancellable = nil
-    }
-
-    func loadStops() {
-        errorMessage = nil
-        showError = false
-        isLoading = true
-
-        stopService.fetchStops { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                switch result {
-                case .success(let list):
-                    self?.allStops = list
-                    self?.filteredStops = list
-                case .failure(let error):
-                    self?.errorMessage = error.localizedDescription
-                    self?.showError = true
-                }
-            }
-        }
-    }
-
-    /// updates `filteredStops` as you type
-    func filter(query: String) {
-        guard !query.isEmpty else {
-            filteredStops = allStops
-            return
-        }
-        filteredStops = allStops.filter {
-            $0.name.localizedCaseInsensitiveContains(query)
-            || String($0.id).hasPrefix(query)
-        }
+        timer?.cancel()
+        timer = nil
     }
 }
