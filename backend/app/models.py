@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
 
 class Route(BaseModel):
     route_id:    int
     route_name:  str
     status:      str
-    eta:         datetime
+    eta:         str
     route_color: str = Field(alias="routeColor")
 
     class Config:
