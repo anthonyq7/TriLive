@@ -1,13 +1,6 @@
-//
-//  FavoriteCard.swift
-//  TriLive
-//
-//  Created by Anthony Qin on 6/17/25.
-//
-
 import SwiftUI
 
-//A card showing a favorited route at a given stop, with a remove button.
+// A card showing a favorited route at a given stop, with a remove button.
 struct FavoriteCard: View {
     let parentStop: Stop
     let route: Route
@@ -15,37 +8,36 @@ struct FavoriteCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // MARK: – Route badge (circular)
-            Text(route.isMAX ? "MAX" : "\(route.id)")
+            Text("\(route.routeId)")
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .font(.headline)
                 .foregroundColor(.white)
                 .padding(10)
-                .background(route.isMAX ? Color.blue : Color.green)
+                .background(Color(route.routeColor))
                 .clipShape(Circle())
                 .frame(width: 54, height: 54)
 
-            // MARK: – Route details (name & direction)
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(route.name)
+                Text(route.routeName)
                     .font(.headline)
                     .foregroundColor(.white)
                     .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.leading)
 
-                Text(route.direction)
+                Text(route.status)
                     .font(.subheadline)
                     .foregroundColor(.white)
                     .minimumScaleFactor(0.95)
                     .multilineTextAlignment(.leading)
             }
             .layoutPriority(1)
+
             Spacer()
 
-            // MARK: – Stop info & remove favorite button
             VStack(alignment: .trailing, spacing: 12) {
-                // show stop’s name instead of just its id
+                // show stop’s name
                 Text(parentStop.name)
                     .font(.subheadline)
                     .foregroundColor(.white)
@@ -58,7 +50,7 @@ struct FavoriteCard: View {
                         .foregroundColor(.yellow)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Remove favorite \(route.name) from \(parentStop.name)")
+                .accessibilityLabel("Remove favorite \(route.routeName) from \(parentStop.name)")
                 .accessibilityAddTraits(.isButton)
             }
             .padding()
@@ -74,28 +66,27 @@ struct FavoriteCard: View {
 }
 
 #Preview {
-    // sample Stop matching your new model
+
     let sampleStop = Stop(
-        id: 1,
+        id:   1,
         name: "Main St & 3rd Ave",
-        latitude: 45.512,
-        longitude: -122.658,
-        description: "Near the library", trimetID: 123456
+        lon:  -122.6587,
+        lat:   45.5120
     )
-    // sample Route (manually constructed)
+    // sample Route
     let sampleRoute = Route(
-        id: 10,
-        name: "10 – Downtown",
-        arrivalTime: 900,
-        direction: "Northbound",
-        realTime: 905,
-        isMAX: false
+        stopId: 2,
+        routeId:    10,
+        routeName: "10 – Downtown",
+        status:     "IN_SERVICE",
+        eta:        "5",
+        routeColor: "green"
     )
 
     FavoriteCard(
         parentStop: sampleStop,
-        route: sampleRoute,
-        onRemove: { print("Removed!") }
+        route:      sampleRoute,
+        onRemove:   { print("Removed!") }
     )
     .preferredColorScheme(.dark)
 }

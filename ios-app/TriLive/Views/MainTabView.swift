@@ -1,49 +1,59 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @Binding var favoriteRouteIDs: Set<Int>
-    @ObservedObject var locationManager: LocationManager
-    @ObservedObject var timeManager: TimeManager
-    @Binding var navigationPath: NavigationPath
+    //Store Set<Int> in UserDefaults as JSON
+    @AppStorage("favoriteRoutesData") private var favoriteRoutesData: Data = Data()
+    private var favoriteRouteIDs: Binding<Set<Int>> {
+        Binding(
+            get: {
+                (try? JSONDecoder().decode(Set<Int>.self, from: favoriteRoutesData)) ?? []
+            },
+            set: { newValue in
+                favoriteRoutesData = (try? JSONEncoder().encode(newValue)) ?? Data()
+            }
+        )
+    }
 
-    // shared view model for stops & arrivals
-    @StateObject private var stopVM = StopViewModel()
+    //Shared managers
+    @StateObject private var locationManager = LocationManager()
+    @StateObject private var timeManager     = TimeManager()
 
-    // which tab is selected
+    //Independent nav paths per tab
+    @State private var homePath = NavigationPath()
+    @State private var favsPath = NavigationPath()
+
+    // for which tab is selected
     @State private var selectedTab = Tab.home
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            //Home tab
-            NavigationStack(path: $navigationPath) {
+            //Home
+            NavigationStack(path: $homePath) {
                 HomeView(
-                    favoriteRouteIDs: $favoriteRouteIDs,
+                    favoriteRouteIDs: favoriteRouteIDs,
                     locationManager:  locationManager,
                     timeManager:      timeManager,
-                    navigationPath:   $navigationPath
+                    navigationPath:   $homePath
                 )
             }
             .tabItem { Label("Home", systemImage: "bus.fill") }
             .tag(Tab.home)
 
-            // MARK: – Favorites tab
-            NavigationStack(path: $navigationPath) {
+            //Favorites
+            NavigationStack(path: $favsPath) {
                 FavoritesView(
-                    favoriteRouteIDs: $favoriteRouteIDs,
-                    navPath:          $navigationPath,
-                    timeManager:      timeManager,
+                    favoriteRouteIDs: favoriteRouteIDs,
+                    navPath:          $favsPath,
+                    timeManager:      timeManager
                 )
             }
             .tabItem { Label("Favorites", systemImage: "star.fill") }
             .tag(Tab.favorites)
 
-            //Settings tab
+            //Settings
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
-        }
-        .onAppear {
-            stopVM.loadStops()    // preload stops & arrivals
         }
         .preferredColorScheme(.dark)
     }
@@ -51,7 +61,6 @@ struct MainTabView: View {
 
 extension MainTabView {
     enum Tab: Hashable {
-        case debug, home, favorites, settings
+        case home, favorites, settings
     }
 }
-

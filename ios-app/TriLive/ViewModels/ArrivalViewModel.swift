@@ -5,34 +5,48 @@
 //  Created by Brian Maina on 7/7/25.
 //
 
-
+// ArrivalsViewModel.swift
 import Foundation
-import Combine
 
-final class ArrivalViewModel: ObservableObject {
-    @Published var arrivals: [Arrival] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    @Published var showError = false
+@MainActor
+class ArrivalsViewModel: ObservableObject {
+  @Published var arrivals:     [Arrival] = []
+  @Published var isLoading     = false
+  @Published var errorMessage: String?
 
-    func loadArrivals(for stopID: Int) {
-        isLoading = true
-        showError = false
-        ArrivalService.shared.fetchArrivals(for: stopID) { result in
-            DispatchQueue.main.async {
-                self.isLoading = false
-                switch result {
-                case .success(let arr):
-                    self.arrivals = arr
-                case .failure(let err):
-                    self.errorMessage = err.localizedDescription
-                    self.showError = true
-                }
-            }
-        }
+  private let api = APIClient()
+  private var timer: Timer?
+
+  let stopId:  Int
+  let routeId: Int
+
+  init(stopId: Int, routeId: Int) {
+    self.stopId  = stopId
+    self.routeId = routeId
+  }
+
+  func loadArrivals() async {
+    isLoading = true
+    defer    { isLoading = false }
+
+    do {
+      let all = try await api.fetchArrivals(for: stopId)
+      // if you only want this route:
+      arrivals = all.filter { $0.routeId == routeId }
+    } catch {
+      errorMessage = "Couldn’t load arrivals: \(error)"
     }
+  }
 
-    func clear() {
-        arrivals = []
+  func startPolling(interval: TimeInterval = 30) {
+    Task { await loadArrivals() }
+    timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
+      Task { await self.loadArrivals() }
     }
+  }
+
+  func stopPolling() {
+    timer?.invalidate()
+    timer = nil
+  }
 }
