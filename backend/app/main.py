@@ -77,13 +77,12 @@ async def get_arrivals(stop_id: int):
         status = arrival.get("status", "") 
         if status in ["estimated", "scheduled"]: #checks to make sure route will occur (not delayed or cancelled)
             eta = arrival.get("estimated") or arrival.get("scheduled")
-            converted_eta = timeConvert(eta) #converts from unix ms to HR:MIN AM or PM
             new_route = models.Route(
                 stop_id=stop_id,
                 route_id=arrival.get("route"),
                 route_name=arrival.get("fullSign") or arrival.get("shortSign") or "",
                 status=status,
-                eta=converted_eta,
+                eta=eta,
                 routeColor=arrival.get("routeColor", "")
             )
             arrivals_db[str(new_route.route_id) + ":" + str(eta)] = new_route.model_dump()
@@ -127,17 +126,21 @@ async def get_closest_stop(longitude: float, latitude: float):
         return new_station
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
+
+""" 
 def timeConvert(ms_timestamp: int):
     # Convert milliseconds to seconds
-    #pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
-    #dt = datetime.datetime.fromtimestamp(ms_timestamp / 1000, tz=pacific)
+    pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+    dt = datetime.datetime.fromtimestamp(ms_timestamp / 1000, tz=pacific)
     # %-I is hour without leading zero (on Unix); %M is minutes; %p is AM/PM
-    #return #dt.strftime("%-I:%M %p")
+    return dt.strftime("%-I:%M %p")
+
+def timeMinsLeft(ms_timestamp: int):
     current_time_seconds = time.time()
     eta_time_seconds = ms_timestamp/1000
     time_difference_seconds  = (eta_time_seconds - current_time_seconds)
     return str(time_difference_seconds/60) + " min" if time_difference_seconds > 0 else "Arrived"
+"""
 
 
 async def fetch_stops():

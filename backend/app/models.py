@@ -4,7 +4,7 @@ class Route(BaseModel):
     route_id:    int
     route_name:  str
     status:      str
-    eta:         str
+    eta:         int
     route_color: str = Field(alias="routeColor")
 
     class Config:
