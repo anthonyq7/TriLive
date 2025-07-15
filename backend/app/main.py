@@ -6,6 +6,7 @@ import anyio
 
 import os
 import datetime
+import time
 import json
 import asyncio
 import zoneinfo
@@ -128,11 +129,16 @@ async def get_closest_stop(longitude: float, latitude: float):
         raise HTTPException(status_code=404, detail=str(e))
     
 def timeConvert(ms_timestamp: int):
-    # Convert milliseconds to seconds for fromtimestamp()
-    pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
-    dt = datetime.datetime.fromtimestamp(ms_timestamp / 1000, tz=pacific)
+    # Convert milliseconds to seconds
+    #pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+    #dt = datetime.datetime.fromtimestamp(ms_timestamp / 1000, tz=pacific)
     # %-I is hour without leading zero (on Unix); %M is minutes; %p is AM/PM
-    return dt.strftime("%-I:%M %p")
+    #return #dt.strftime("%-I:%M %p")
+    current_time_seconds = time.time()
+    eta_time_seconds = ms_timestamp/1000
+    time_difference_seconds  = (eta_time_seconds - current_time_seconds)
+    return str(time_difference_seconds/60) + " min" if time_difference_seconds > 0 else "Arrived"
+
 
 async def fetch_stops():
     url = (
