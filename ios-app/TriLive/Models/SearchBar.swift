@@ -7,14 +7,14 @@ struct SearchBar: View {
     @Binding var stopSelected: Bool
     @Binding var selectedStop: Stop?
     var stopList: [Stop]
-    var isFocused: FocusState<Bool>.Binding
-
+    @FocusState.Binding var isFocused: Bool
+    
     var body: some View {
         VStack(spacing: 0) {
             //Text field + search icon
             HStack {
                 TextField("Enter a stop", text: $searchQuery)
-                    .focused(isFocused)
+                    .focused($isFocused)
                     .submitLabel(.search)
                     .onSubmit(performSearch)
                     .padding(12)
@@ -29,9 +29,15 @@ struct SearchBar: View {
                     .onTapGesture { performSearch() }
             }
             .padding(.horizontal)
+            .onChange(of: searchQuery){
+                if searchQuery != selectedStop?.name {
+                    stopSelected = false
+                    selectedStop = nil
+                }
+            }
 
             //Dropdown
-            if isFocused.wrappedValue && !stopList.isEmpty {
+            if isFocused && !stopList.isEmpty {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0) {
 
@@ -44,7 +50,7 @@ struct SearchBar: View {
                         .foregroundColor(.primary)
                         .background(Color(.systemBackground))
                         .onTapGesture {
-                            isFocused.wrappedValue = false
+                            isFocused = false
                             selectNearestStop()
                         }
                         Divider()
@@ -56,7 +62,10 @@ struct SearchBar: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .foregroundColor(.primary)
                                 .background(Color(.systemBackground))
-                                .onTapGesture { select(stop) }
+                                .onTapGesture {
+                                    select(stop)
+                                    isFocused = false
+                                }
                             Divider()
                         }
                     }
@@ -86,7 +95,7 @@ struct SearchBar: View {
         searchQuery   = stop.name
         selectedStop  = stop
         stopSelected  = true
-        isFocused.wrappedValue = false
+        isFocused = false
     }
 
 
@@ -108,6 +117,6 @@ struct SearchBar: View {
         searchQuery   = nearest.name
         selectedStop  = nearest
         stopSelected  = true
-        isFocused.wrappedValue = false
+        isFocused = false
     }
 }
