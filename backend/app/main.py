@@ -195,7 +195,7 @@ def _sync_stops(stops):
         }
 
         new_rows = [
-            {"id": s.stop_id, "name": s.name, "lat": s.lat, "lon": s.lon}
+            {"id": s.stop_id, "name": s.name, "lat": s.lat, "lon": s.lon, "dir": s.dir}
             for s in stops
             if s.stop_id not in existing_ids
         ]
