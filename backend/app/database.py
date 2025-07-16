@@ -16,6 +16,7 @@ class Stop(Base):
     name = Column(String,nullable=False)
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
+    dir = Column(String, nullable=False)
 
 class Favorite(Base):
     __tablename__ = "Favorites"
