@@ -107,6 +107,9 @@ struct HomeView: View {
             }
             .padding(.top, 24)
         }
+        .onTapGesture{
+            isSearchFocused = false
+        }
     }
 
     // MARK: Loading overlay
