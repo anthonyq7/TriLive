@@ -222,22 +222,6 @@ async def sync_stops():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.put("/add_dir")
-async def add_dir():
-    stops = await fetch_stops()
-    db = database.SessionLocal()
-    try:
-        for stop in db.query(database.Stop).all():
-            for s in stops:
-                if s.stop_id == stop.id:
-                    updated = database.Stop(id=stop.id, name=stop.name, lat=stop.lat, lon=stop.lon, dir=s.dir)
-                    stop = updated
-
-        db.commit()
-    finally:
-        db.close()
-
-
 @app.websocket("/track/{stop_id}/{route_id}")
 async def track(ws: WebSocket, stop_id: int, route_id: int):
     await ws.accept()
