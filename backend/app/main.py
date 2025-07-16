@@ -229,7 +229,7 @@ async def add_dir():
     try:
         for stop in db.query(database.Stop).all():
             for s in stops:
-                if s.id == stop.id:
+                if s.stop_id == stop.id:
                     updated = database.Stop(id=stop.id, name=stop.name, lat=stop.lat, lon=stop.lon, dir=s.dir)
                     stop = updated
 
