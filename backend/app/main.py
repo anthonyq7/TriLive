@@ -228,10 +228,10 @@ async def add_dir():
     db = database.SessionLocal()
     try:
         for stop in db.query(database.Stop).all():
-            if not stop.dir:
-                for s in stops:
-                    if s.id == stop.id:
-                        stop.dir = s.dir
+            for s in stops:
+                if s.id == stop.id:
+                    updated = database.Stop(id=stop.id, name=stop.name, lat=stop.lat, lon=stop.lon, dir=s.dir)
+                    stop = updated
 
         db.commit()
     finally:
