@@ -19,7 +19,7 @@ class Stop(Base):
     name        = Column(String,  nullable=False)
     latitude    = Column(Float,   nullable=False)   
     longitude   = Column(Float,   nullable=False)  
-    dir         = Column(String,  nullable=False)
+    dir         = Column(String,  nullable=True)
     trimet_id = Column(BigInteger, unique=True, nullable=True)
     description = Column(String, nullable=True)
 
