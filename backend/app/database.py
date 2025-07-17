@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Column, String, Integer, Float
+from sqlalchemy import BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -19,7 +20,7 @@ class Stop(Base):
     latitude    = Column(Float,   nullable=False)   
     longitude   = Column(Float,   nullable=False)  
     dir         = Column(String,  nullable=False)
-    trimet_id   = Column(Integer, unique=True, nullable=True)
+    trimet_id = Column(BigInteger, unique=True, nullable=True)
     description = Column(String, nullable=True)
 
 
