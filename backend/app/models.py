@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, Optional
+from pydantic import BaseModel, Field
+from typing import Optional
 
 class Route(BaseModel):
     route_id:    int
