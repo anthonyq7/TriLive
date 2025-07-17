@@ -16,7 +16,7 @@ struct APIClient {
     
     // fetch the stop catalog from GET /stops
     func fetchStops() async throws -> [Stop] {
-        let url = baseURL.appendingPathComponent("stops")
+        let url = baseURL.appendingPathComponent("stations")
         let (data, response) = try await URLSession.shared.data(from: url)
         guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
             throw URLError(.badServerResponse)
