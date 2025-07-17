@@ -71,7 +71,8 @@ struct FavoriteCard: View {
         id:   1,
         name: "Main St & 3rd Ave",
         lon:  -122.6587,
-        lat:   45.5120
+        lat:   45.5120,
+        dir: "Northbound"
     )
     // sample Route
     let sampleRoute = Route(
@@ -80,7 +81,8 @@ struct FavoriteCard: View {
         routeName: "10 – Downtown",
         status:     "IN_SERVICE",
         eta:        "5",
-        routeColor: "green"
+        routeColor: "green",
+        eta_unix: 17509349032
     )
 
     FavoriteCard(

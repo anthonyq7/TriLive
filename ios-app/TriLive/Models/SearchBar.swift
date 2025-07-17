@@ -30,7 +30,7 @@ struct SearchBar: View {
             }
             .padding(.horizontal)
             .onChange(of: searchQuery){
-                if searchQuery != selectedStop?.name {
+                if searchQuery != (selectedStop?.name ?? "") + " " + dirMapper(selectedStop?.dir ?? "") {
                     stopSelected = false
                     selectedStop = nil
                 }
@@ -57,7 +57,7 @@ struct SearchBar: View {
 
 
                         ForEach(stopList) { stop in
-                            Text(stop.name)
+                            Text(stop.name + " " + dirMapper(stop.dir))
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .foregroundColor(.primary)
@@ -82,20 +82,51 @@ struct SearchBar: View {
 
     //Tap the magnifying glass or hit return
     private func performSearch() {
-        if let match = stopList.first(where: {
-            $0.name.localizedCaseInsensitiveContains(searchQuery) ||
-            "\($0.id)".hasPrefix(searchQuery)
+        let rawQuery = searchQuery
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard !rawQuery.isEmpty else { return }
+        
+        let ampVariant = rawQuery.replacingOccurrences(of: "and", with: "&")
+        let andVariant = rawQuery.replacingOccurrences(of: "&",   with: "and")
+        let variants = [rawQuery, ampVariant, andVariant]
+        
+        if let match = stopList.first(where: { stop in
+            let nameLower = (stop.name + " " + stop.dir).lowercased()
+            let idLower   = String(describing: stop.id).lowercased()
+            
+            return variants.contains(where: { q in
+                nameLower.contains(q)
+                || idLower.hasPrefix(q)
+                || idLower.contains(q)
+            })
         }) {
             select(match)
         }
     }
 
+
     //When a stop row is tapped
     private func select(_ stop: Stop) {
-        searchQuery   = stop.name
+        searchQuery   = stop.name + " " + dirMapper(stop.dir)
         selectedStop  = stop
         stopSelected  = true
         isFocused = false
+    }
+    
+    private func dirMapper(_ dir: String) -> String {
+        switch dir {
+        case "Northbound":
+            return "N"
+        case "Southbound":
+            return "S"
+        case "Eastbound":
+            return "E"
+        case "Westbound":
+            return "W"
+        default:
+            return ""
+        }
     }
 
 

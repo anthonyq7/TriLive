@@ -26,69 +26,87 @@ final class StopViewModel: ObservableObject {
     private var timer: AnyCancellable?
     
     func loadStops() async {
-      isLoading      = true
-      showError      = false
-      errorMessage   = nil
-
-      do {
-        let stops = try await api.fetchStops()
-        allStops       = stops
-        filteredStops  = stops
-      } catch {
-        errorMessage = error.localizedDescription
-        showError    = true
-      }
-
-      isLoading = false
+        isLoading      = true
+        showError      = false
+        errorMessage   = nil
+        
+        do {
+            let stops = try await api.fetchStops()
+            allStops       = stops
+            filteredStops  = stops
+        } catch {
+            errorMessage = error.localizedDescription
+            showError    = true
+        }
+        
+        isLoading = false
     }
-
+    
     //Filter the list of stops
     func filter(_ q: String) {
-      if q.isEmpty {
-        filteredStops = allStops
-      } else {
-        filteredStops = allStops.filter {
-          $0.name.localizedCaseInsensitiveContains(q)
+        let raw = q
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        
+        guard !raw.isEmpty else {
+            filteredStops = allStops
+            return
         }
-      }
+        
+        let alt1 = raw.replacingOccurrences(of: "&",   with: "and")
+        let alt2 = raw.replacingOccurrences(of: "and", with: "&")
+        let queries = Set([raw, alt1, alt2])
+        
+        filteredStops = allStops.filter { stop in
+            let nameLower = (stop.name + " " + stop.dir).lowercased()
+            let idLower   = String(stop.id).lowercased()
+            
+            let nameMatches = queries.contains { nameLower.contains($0) }
+            let idMatches   = queries.contains { idLower.contains($0) }
+            
+            return nameMatches || idMatches
+        }
     }
-
+    
+    
+    
     func loadArrivals(for stop: Stop) async {
-      print(" Fetching arrivals for stopID = \(stop.id)")
-      isLoadingArrivals = true
-      showArrivalsError = false
-
-      do {
-        let raw = try await api.fetchArrivals(for: stop.id)
-        print(" Raw arrivals JSON decoded: \(raw.count) items")
-
-        // … collapse into earliestPerRoute / build routes …
-        self.arrivals = raw
-        let earliestPerRoute = Dictionary(grouping: raw, by: \.routeId)
-          .compactMap { _, arrs in arrs.min(by: { $0.arrivalDate < $1.arrivalDate }) }
-
-        self.routes = earliestPerRoute
-          .sorted(by: { $0.arrivalDate < $1.arrivalDate })
-          .map { a in
-            Route(
-              stopId:     stop.id,
-              routeId:    a.routeId,
-              routeName:  a.routeName,
-              status:     a.status,
-              eta:        "\(a.minutesUntilArrival)",
-              routeColor: a.routeColor
-            )
-          }
-          print("[DEBUG] routes.count = \(self.routes.count); ids = \(self.routes.map(\.routeId))")
-        print(" routes built: \(self.routes.count)")
-      } catch {
-        print("loadArrivals error: \(error)")
-        showArrivalsError = true
-        arrivals = []
-        routes   = []
-      }
-
-      isLoadingArrivals = false
+        print(" Fetching arrivals for stopID = \(stop.id)")
+        isLoadingArrivals = true
+        showArrivalsError = false
+        
+        do {
+            let raw = try await api.fetchArrivals(for: stop.id)
+            print(" Raw arrivals JSON decoded: \(raw.count) items")
+            
+            // … collapse into earliestPerRoute / build routes …
+            self.arrivals = raw
+            let earliestPerRoute = Dictionary(grouping: raw, by: \.routeId)
+                .compactMap { _, arrs in arrs.min(by: { $0.arrivalDate < $1.arrivalDate }) }
+            
+            self.routes = earliestPerRoute
+                .sorted(by: { $0.arrivalDate < $1.arrivalDate })
+                .map { a in
+                    Route(
+                        stopId:     stop.id,
+                        routeId:    a.routeId,
+                        routeName:  a.routeName,
+                        status:     a.status,
+                        eta:        "\(a.minutesUntilArrival)",
+                        routeColor: a.routeColor,
+                        eta_unix: a.eta
+                    )
+                }
+            print("[DEBUG] routes.count = \(self.routes.count); ids = \(self.routes.map(\.routeId))")
+            print(" routes built: \(self.routes.count)")
+        } catch {
+            print("loadArrivals error: \(error)")
+            showArrivalsError = true
+            arrivals = []
+            routes   = []
+        }
+        
+        isLoadingArrivals = false
     }
     
     func startPollingArrivals(for stop: Stop) {

@@ -142,7 +142,8 @@ struct HomeView: View {
                     routeName:  arrival.routeName,
                     status:     arrival.status,
                     eta:        "\(arrival.minutesUntilArrival)",
-                    routeColor: arrival.routeColor
+                    routeColor: arrival.routeColor,
+                    eta_unix: arrival.eta
                 )
                 RouteCard(
                     parentStop:     stop,
