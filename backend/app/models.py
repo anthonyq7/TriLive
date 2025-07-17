@@ -18,6 +18,7 @@ class Station(BaseModel):
     lon:     float
     lat:     float
     dist:    int
+    trimet_id: int
 
     class Config:
         orm_mode = True
