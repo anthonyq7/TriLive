@@ -18,7 +18,7 @@ class Station(BaseModel):
     lon:     float
     lat:     float
     dist:    int
-    trimet_id: int
+    trimet_id: int = Field(default=None, alias="stop_id")
 
     class Config:
         orm_mode = True
