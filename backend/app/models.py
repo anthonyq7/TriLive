@@ -15,7 +15,7 @@ class Route(BaseModel):
 class Station(BaseModel):
     stop_id: int
     name:    str
-    dir:     str
+    dir:     Optional[str] = None
     lon:     float
     lat:     float
     dist:    int
