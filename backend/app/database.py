@@ -20,6 +20,7 @@ class Stop(Base):
     longitude   = Column(Float,   nullable=False)  
     dir         = Column(String,  nullable=False)
     trimet_id   = Column(Integer, unique=True, nullable=True)
+    description = Column(String, nullable=True)
 
 
 class Favorite(Base):
