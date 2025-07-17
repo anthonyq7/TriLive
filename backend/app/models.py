@@ -21,3 +21,6 @@ class Station(BaseModel):
 
     class Config:
         orm_mode = True
+        model_config = {
+        "extra": "ignore",
+    }
