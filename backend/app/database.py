@@ -13,11 +13,12 @@ SessionLocal=sessionmaker(bind=engine)
 
 class Stop(Base):
     __tablename__ = "StopTable"
-    trimet_id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String,nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     dir = Column(String, nullable=False)
+    trimet_id  = Column(Integer, unique=True, nullable=True)
 
 class Favorite(Base):
     __tablename__ = "Favorites"
