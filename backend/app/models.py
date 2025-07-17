@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Optional
 
 class Route(BaseModel):
     route_id:    int
@@ -19,6 +19,7 @@ class Station(BaseModel):
     lat:     float
     dist:    int
     trimet_id: int = Field(default=None, alias="stop_id")
+    description : Optional[str]
 
     class Config:
         orm_mode = True
