@@ -17,7 +17,7 @@ class Stop(Base):
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
     dir = Column(String, nullable=False)
-    trimet_id  = Column(Integer, unique=True, nullable=True)
+    trimet_id = Column(Integer, unique=True, nullable=True)
 
 class Favorite(Base):
     __tablename__ = "Favorites"
