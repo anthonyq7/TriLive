@@ -249,12 +249,14 @@ struct LiveActivityCard: View {
 struct RouteDetailView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleStop = Stop(
-            id: 1,
-            name:   "Main St & 3rd Ave",
-            lon:   -122.6587,
-            lat:    45.5120,
-            dir: "Southbound"
-        )
+            stopId:      1001,
+            name:        "Main St & 1st Ave",
+            dir:         "Northbound",
+            lon:         -122.662345,
+            lat:         45.512789,
+            dist:        0,
+            description: nil
+          )
         let sampleRoute = Route(
             stopId:     2,
             routeId:    10,

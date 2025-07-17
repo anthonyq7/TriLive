@@ -24,23 +24,28 @@ final class StopViewModel: ObservableObject {
     
     private let api = APIClient()
     private var timer: AnyCancellable?
+    private var hasLoadedStops = false
     
     func loadStops() async {
-        isLoading      = true
-        showError      = false
-        errorMessage   = nil
-        
-        do {
+          // bail out if we’ve already done this once
+          guard !hasLoadedStops else { return }
+          hasLoadedStops = true
+
+          isLoading     = true
+          showError     = false
+          errorMessage  = nil
+
+          do {
             let stops = try await api.fetchStops()
-            allStops       = stops
-            filteredStops  = stops
-        } catch {
+            allStops      = stops
+            filteredStops = stops
+          } catch {
             errorMessage = error.localizedDescription
             showError    = true
+          }
+
+          isLoading = false
         }
-        
-        isLoading = false
-    }
     
     //Filter the list of stops
     func filter(_ q: String) {
@@ -58,7 +63,7 @@ final class StopViewModel: ObservableObject {
         let queries = Set([raw, alt1, alt2])
         
         filteredStops = allStops.filter { stop in
-            let nameLower = (stop.name + " " + stop.dir).lowercased()
+            let nameLower = (stop.name + " " + (stop.dir ?? "")).lowercased()
             let idLower   = String(stop.id).lowercased()
             
             let nameMatches = queries.contains { nameLower.contains($0) }

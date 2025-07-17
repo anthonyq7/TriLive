@@ -29,10 +29,14 @@ struct SearchBar: View {
                     .onTapGesture { performSearch() }
             }
             .padding(.horizontal)
-            .onChange(of: searchQuery){
-                if searchQuery != (selectedStop?.name ?? "") + " " + dirMapper(selectedStop?.dir ?? "") {
-                    stopSelected = false
-                    selectedStop = nil
+            .onChange(of: searchQuery) { _ in
+                // break concatenation into vars
+                let baseName = selectedStop?.name ?? ""
+                let baseDir  = selectedStop?.dir  ?? ""
+                let expected = baseName + " " + dirMapper(baseDir)
+                if searchQuery != expected {
+                    stopSelected  = false
+                    selectedStop  = nil
                 }
             }
 
@@ -55,9 +59,11 @@ struct SearchBar: View {
                         }
                         Divider()
 
-
                         ForEach(stopList) { stop in
-                            Text(stop.name + " " + dirMapper(stop.dir))
+                            // pull this string out
+                            let baseDir = stop.dir ?? ""
+                            let label   = stop.name + " " + dirMapper(baseDir)
+                            Text(label)
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .foregroundColor(.primary)
@@ -86,68 +92,70 @@ struct SearchBar: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         guard !rawQuery.isEmpty else { return }
-        
+
         let ampVariant = rawQuery.replacingOccurrences(of: "and", with: "&")
         let andVariant = rawQuery.replacingOccurrences(of: "&",   with: "and")
-        let variants = [rawQuery, ampVariant, andVariant]
-        
+        let variants   = [rawQuery, ampVariant, andVariant]
+
         if let match = stopList.first(where: { stop in
-            let nameLower = (stop.name + " " + stop.dir).lowercased()
+            let nameLower = (stop.name + " " + (stop.dir ?? "")).lowercased()
             let idLower   = String(describing: stop.id).lowercased()
-            
-            return variants.contains(where: { q in
-                nameLower.contains(q)
-                || idLower.hasPrefix(q)
-                || idLower.contains(q)
-            })
+
+            // explicit loop instead of nested contains calls
+            for q in variants {
+                if nameLower.contains(q)
+                    || idLower.hasPrefix(q)
+                    || idLower.contains(q)
+                {
+                    return true
+                }
+            }
+            return false
         }) {
             select(match)
         }
     }
 
-
     //When a stop row is tapped
     private func select(_ stop: Stop) {
-        searchQuery   = stop.name + " " + dirMapper(stop.dir)
-        selectedStop  = stop
-        stopSelected  = true
-        isFocused = false
+        let baseName = stop.name
+        let baseDir  = stop.dir ?? ""
+        let combined = baseName + " " + dirMapper(baseDir)
+        
+        searchQuery  = combined
+        selectedStop = stop
+        stopSelected = true
+        isFocused    = false
     }
     
     private func dirMapper(_ dir: String) -> String {
         switch dir {
-        case "Northbound":
-            return "N"
-        case "Southbound":
-            return "S"
-        case "Eastbound":
-            return "E"
-        case "Westbound":
-            return "W"
-        default:
-            return ""
+        case "Northbound": return "N"
+        case "Southbound": return "S"
+        case "Eastbound":  return "E"
+        case "Westbound":  return "W"
+        default:           return ""
         }
     }
 
-
     private func selectNearestStop() {
-        //grabs the user’s coordinate
+        // grabs the user’s coordinate
         guard let coord = locationManager.location else { return }
-        //wraps it in a CLLocation so we can measure distance
+        // wraps it in a CLLocation so we can measure distance
         let userLoc = CLLocation(latitude: coord.latitude,
                                  longitude: coord.longitude)
 
-        //finds the nearest stop by comparing distances
+        // finds the nearest stop by comparing distances
         guard let nearest = stopList.min(by: { s1, s2 in
             let loc1 = CLLocation(latitude: s1.lat, longitude: s1.lon)
             let loc2 = CLLocation(latitude: s2.lat, longitude: s2.lon)
             return userLoc.distance(from: loc1) < userLoc.distance(from: loc2)
         }) else { return }
 
-        //selects it
-        searchQuery   = nearest.name
-        selectedStop  = nearest
-        stopSelected  = true
-        isFocused = false
+        // selects it
+        searchQuery  = nearest.name
+        selectedStop = nearest
+        stopSelected = true
+        isFocused    = false
     }
 }

@@ -38,15 +38,21 @@ class ArrivalsViewModel: ObservableObject {
     }
   }
 
-  func startPolling(interval: TimeInterval = 30) {
-    Task { await loadArrivals() }
-    timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
-      Task { await self.loadArrivals() }
+    func startPolling(interval: TimeInterval = 30) {
+      //Don’t re-start if we already have a timer
+      guard timer == nil else { return }
+
+      // Kick off an initial load immediately
+      Task { await loadArrivals() }
+
+      // Schedule the repeating timer
+      timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        Task { await self?.loadArrivals() }
+      }
+    }
+
+    func stopPolling() {
+      timer?.invalidate()
+      timer = nil
     }
   }
-
-  func stopPolling() {
-    timer?.invalidate()
-    timer = nil
-  }
-}

@@ -68,12 +68,14 @@ struct FavoriteCard: View {
 #Preview {
 
     let sampleStop = Stop(
-        id:   1,
-        name: "Main St & 3rd Ave",
-        lon:  -122.6587,
-        lat:   45.5120,
-        dir: "Northbound"
-    )
+        stopId:      1001,
+        name:        "Main St & 1st Ave",
+        dir:         "Northbound",
+        lon:         -122.662345,
+        lat:         45.512789,
+        dist:        0,
+        description: nil
+      )
     // sample Route
     let sampleRoute = Route(
         stopId: 2,
