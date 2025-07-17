@@ -48,7 +48,7 @@ struct RouteDetailView: View {
                     header
                     stopButton
                     liveActivitySection
-                    upcomingArrivalsSection
+                    //upcomingArrivalsSection
                     mapSection
                 }
                 .padding(.vertical)
@@ -206,11 +206,14 @@ struct RouteDetailView: View {
 struct LiveActivityCard: View {
     @ObservedObject var timeManager: TimeManager
     let route: Route
+    
 
     var body: some View {
-        let minutes  = timeManager.timeDifferenceInMinutes()
-        let total    = Double(minutes)
-        let progress = min(total, total)
+        let minutes  = ceil(timeManager.timeDifferenceInMinutes())
+        let currentUnixTimeSeconds = Int(Date().timeIntervalSince1970)
+        let etaUnixSeconds = Int(route.eta_unix/1000)
+        let totalMin    = Int((etaUnixSeconds - currentUnixTimeSeconds)/60)
+        let progress = min(Int(minutes), totalMin)
 
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -220,7 +223,7 @@ struct LiveActivityCard: View {
                 Text("ETA: " +
                     DateFormatter
                         .localizedString(
-                            from: Date().addingTimeInterval(total * 60),
+                            from: Date().addingTimeInterval(Double(totalMin) * 60),
                             dateStyle: .none,
                             timeStyle: .short
                         )
@@ -228,10 +231,10 @@ struct LiveActivityCard: View {
                 .font(.subheadline)
             }
 
-            Text("Your ride will be here in \(minutes) min\(minutes == 1 ? "" : "s")")
+            Text("Your ride will be here in \(Int(Double(totalMin) - minutes)) min\(Int(Double(totalMin) - minutes) == 1 ? "" : "s")")
                 .font(.subheadline)
 
-            ProgressView(value: progress, total: total)
+            ProgressView(value: Double(progress), total: Double(totalMin))
         }
         .padding()
         .background(Color("AppBackground").opacity(0.8))
@@ -249,7 +252,8 @@ struct RouteDetailView_Previews: PreviewProvider {
             id: 1,
             name:   "Main St & 3rd Ave",
             lon:   -122.6587,
-            lat:    45.5120
+            lat:    45.5120,
+            dir: "Southbound"
         )
         let sampleRoute = Route(
             stopId:     2,
@@ -257,7 +261,8 @@ struct RouteDetailView_Previews: PreviewProvider {
             routeName:  "10 – Downtown",
             status:     "IN_SERVICE",
             eta:        "5",
-            routeColor: "green"
+            routeColor: "green",
+            eta_unix: 14332934123
         )
 
         NavigationStack {

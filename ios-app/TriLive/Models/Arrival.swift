@@ -19,6 +19,7 @@ struct Arrival: Identifiable, Decodable {
   var arrivalDate: Date {
     Date(timeIntervalSince1970: Double(eta) / 1_000)
   }
+    
   var minutesUntilArrival: Int {
     let diff = arrivalDate.timeIntervalSinceNow
     return max(0, Int(diff / 60))

@@ -76,7 +76,8 @@ struct RouteCard_Previews: PreviewProvider {
             id:   1,
             name: "Main St & 3rd Ave",
             lon:  -122.6587,
-            lat:   45.5120
+            lat:   45.5120,
+            dir: "Westbound"
         )
         let sampleRoute = Route(
             stopId: 2,
@@ -84,7 +85,8 @@ struct RouteCard_Previews: PreviewProvider {
             routeName: "77 – Broadway",
             status:     "IN_SERVICE",
             eta:        "5",
-            routeColor: "green"
+            routeColor: "green",
+            eta_unix: 187332432
         )
 
         RouteCard(
