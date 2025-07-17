@@ -27,9 +27,9 @@ async def list_stations(db: Session = Depends(get_db)):
         Station(
             stop_id=s.id,
             name=s.name,
-            dir="",       
-            lon=s.lon,
-            lat=s.lat,
+            dir=s.dir,       
+            lon=s.longitude,
+            lat=s.latitude,
             dist=0
         )
         for s in db_stops
