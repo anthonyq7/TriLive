@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="ios-app/TriLive/Assets.xcassets/TriLiveLogo.imageset/TriLiveLogo.png" width="250" alt="TriLive Logo">
+</p>
+
 # TriLive
 
 TriLive is a real-time iOS transit tracker that shows live bus & train ETAs, lets you bookmark favorites, search by location, and works offline. Built as a summer project by Anthony “Ant” Qin and Brian Maina "B.M.M", we plan to deploy it as an App Store release. Powered by SwiftUI + Core Location and a Docker-containerized FastAPI + PostgreSQL + Redis backend.
@@ -10,9 +14,14 @@ TriLive is a real-time iOS transit tracker that shows live bus & train ETAs, let
 2. [Features](#features)  
 3. [Architecture & Tech Stack](#architecture--tech-stack)  
 4. [Production](#production)  
-   - [Prerequisites](#prerequisites)  
-5. [Design Assets](#design-assets)  
-6. [Contact](#contact)  
+   - [Prerequisites](#prerequisites)
+   - [Backend & Frontend Intergration](#Backend--Frontend-Intergration)
+5. [Usage Examples](#usage-examples)
+6. [Potential Updates](#potential-updates)
+7. [Changelog](#changelog)
+8. [Feedback & Issues](#feedback--issues) 
+9. [Design Assets](#design-assets)  
+10. [Contact](#contact)  
 
 ---
 
@@ -38,7 +47,7 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 - **Database**: PostgreSQL  
 - **Cache**: Redis  
 - **Containers**: Docker & Docker Compose  
-
+---
 
 ## Production
 
@@ -48,15 +57,68 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 - **Docker** & **Docker Compose**  
 - (Optional) **Python 3.10+** for manual backend runs
 
-### Backend + Frontend Intergration
+### Backend & Frontend Intergration
 
 Our Dockerized FastAPI backend (Pydantic, SQLAlchemy, Alembic) runs on Render with managed PostgreSQL and Redis, automatically building and deploying on each push to main. The SwiftUI front end calls the secure HTTPS JSON API for live ETAs, favorites syncing, and location-aware search.
 
+---
+## Usage Examples
+
+Below are quick examples showing how to interact with the TriLive API from the command line and in Swift. All endpoints return JSON.
+
+### 1. List Nearby Stops (cURL)
+Fetch all stops within a small radius of the specified latitude/longitude.  
+- **Endpoint:** `GET /stops?lat={latitude}&lon={longitude}`  
+- **Response:** Array of stop objects:
+  [
+    {
+      "id": 1234,
+      "name": "Main St & 5th",
+      "lat": 47.6065,
+      "lon": -122.3327,
+      "distance": 30
+    },
+    ...
+  ]
+
+### 2. Fetch ETAs for a Route (Swift)
+Retrieve the next arrival times for a specific route at a given stop.
+Endpoint: GET /routes/{stop_id}
+Response: Array of ETA objects:
+
+[
+  {
+    "route_id": 5,
+    "route_name": "Downtown Express",
+    "eta_seconds": 120
+  },
+  ...
+]
+
+---
+## Potential Updates
+- Push notifications for arrival alerts
+- User accounts & cross-device sync
+- Dark mode & custom themes
+- WatchOS companion app
+
+---
+## Changelog
+v0.1.0 (2025-07-18)
+Initial launch: live ETAs, favorites, search, offline caching, Render deployment.
+
+---
+## Feedback & Issues
+Found a bug or have an idea? Please open an issue:
+https://github.com/anthonyq7/TriLive/issues
+
+---
 ## Design Assets
 See TriLive Mockups.pdf in the repo root for UI/UX wireframes and flow diagrams.
 
+---
 ## Contact
 Brian Maina – github.com/brianmmaina – bmmaina@bu.edu
 Anthony Qin – github.com/anthonyq7 – a.j.qin@wustl.edu
-
+---
 
