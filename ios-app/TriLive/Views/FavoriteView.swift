@@ -1,45 +1,80 @@
-// FavoritesView.swift
-// TriLive
+//
+//  FavoritesView.swift
+//  TriLive
+//
+//  Created by Brian Maina on 7/3/25.
+//
+
 import SwiftUI
 
 struct FavoritesView: View {
-    @Binding var favoriteRouteIDs: Set<Int>
-    @Binding var selectedStop: Stop?
-    @Binding var navPath:         NavigationPath
-    @ObservedObject var timeManager: TimeManager
-    @StateObject var stopVM = StopViewModel()
-    
-    // highlight/confirm tap state
+    // MARK: – Injected dependencies
+    @ObservedObject var favoritesManager: FavoritesManager
+    @ObservedObject var stopVM:            StopViewModel
+    @ObservedObject var timeManager:       TimeManager
+    @Binding       var navigationPath:     NavigationPath
+
+    // MARK: – Local state for tap-to-confirm overlay
     @State private var focusedRouteID: Int?
 
-    // only show arrivals for routes the user has starred
-    private var favoriteArrivals: [Arrival] {
-        stopVM.arrivals.filter { favoriteRouteIDs.contains($0.routeId) }
-    }
-
     var body: some View {
-        NavigationStack(path: $navPath) {
+        NavigationStack(path: $navigationPath) {
             ZStack {
-                Color("AppBackground").ignoresSafeArea()
-                content
+                // full-screen grey background
+                Color("AppBackground")
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // For each stopId in our grouped, vetted favorites
+                        ForEach(groupedRoutes.keys.sorted(), id: \.self) { stopId in
+                            // header
+                            Text(stopName(for: stopId).uppercased())
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.gray)
+                                .padding(.horizontal, 16)
+
+                            VStack(spacing: 8) {
+                                // routes for that stop, sorted by routeId
+                                ForEach(groupedRoutes[stopId]!.sorted(by: { $0.routeId < $1.routeId }), id: \.routeId) { route in
+                                    // safely unwrap the parent Stop
+                                    if let parent = parentStop(for: route) {
+                                        RouteCard(
+                                            parentStop:  parent,
+                                            line:        route,
+                                            isSelected:  focusedRouteID == route.routeId,
+                                            isFavorited: true,
+                                            onTap:       { confirmOrHighlight(route) },
+                                            onFavoriteTapped: {
+                                                favoritesManager.toggle(route)
+                                            }
+                                        )
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 12)
+                                        .background(Color("CardBackground"))
+                                        .cornerRadius(10)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 4)
+                        }
+                    }
+                    .padding(.vertical, 16)
+                }
+
+                // overlay on top when confirming
                 selectionOverlay
             }
             .navigationTitle("Favorites")
-            .onAppear {
-                if let s = stopVM.selectedStop {
-                    stopVM.startPollingArrivals(for: s)
-                }
-            }
-            .onDisappear {
-                stopVM.stopPollingArrivals()
-            }
+            // no polling here—we leave stopVM to Home
             .navigationDestination(for: Route.self) { route in
-                if let parent = stopVM.selectedStop {
+                // safely unwrap before navigating
+                if let parent = parentStop(for: route) {
                     RouteDetailView(
                         parentStop:  parent,
                         route:       route,
                         stopVM:      stopVM,
-                        navPath:     $navPath,
+                        navPath:     $navigationPath,
                         timeManager: timeManager
                     )
                 }
@@ -47,50 +82,13 @@ struct FavoritesView: View {
         }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        if favoriteArrivals.isEmpty {
-            Text("No Favorites Yet…")
-                .font(.title2).fontWeight(.semibold)
-                .padding(.top, 100)
-        } else {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 12) {
-                    ForEach(favoriteArrivals, id: \.routeId) { arrival in
-                        // build a Route model for this arrival
-                        let routeModel = Route(
-                            stopId:     stopVM.selectedStop?.id ?? 0,
-                            routeId:    arrival.routeId,
-                            routeName:  arrival.routeName,
-                            status:     arrival.status,
-                            eta:        "\(arrival.minutesUntilArrival)",
-                            routeColor: arrival.routeColor,
-                            eta_unix:   arrival.eta
-                        )
-
-                        RouteCard(
-                            parentStop:    stopVM.selectedStop!,
-                            line:          routeModel,
-                            isSelected:    focusedRouteID == routeModel.routeId,
-                            isFavorited:   true,
-                            onTap:         { confirmOrHighlight(routeModel) },
-                            onFavoriteTapped: {
-                                // remove from favorites only when ⭐︎ tapped
-                                favoriteRouteIDs.remove(routeModel.routeId)
-                            }
-                        )
-                        .padding(.horizontal, 12)
-                    }
-                }
-                .padding(.vertical, 16)
-            }
-        }
-    }
+    // MARK: – confirm overlay builder
 
     @ViewBuilder
     private var selectionOverlay: some View {
-        if let stop    = stopVM.selectedStop,
-           let rid     = focusedRouteID,
+        if let rid = focusedRouteID,
+           let route = favoritesManager.routes.first(where: { $0.routeId == rid }),
+           let parent = parentStop(for: route),
            let arrival = stopVM.arrivals.first(where: { $0.routeId == rid })
         {
             VisualEffectBlur(blurStyle: .systemThinMaterialDark)
@@ -98,8 +96,8 @@ struct FavoritesView: View {
                 .zIndex(1)
 
             VStack(spacing: 16) {
-                let routeModel = Route(
-                    stopId:     stop.id,
+                let model = Route(
+                    stopId:     parent.id,
                     routeId:    arrival.routeId,
                     routeName:  arrival.routeName,
                     status:     arrival.status,
@@ -109,20 +107,21 @@ struct FavoritesView: View {
                 )
 
                 RouteCard(
-                    parentStop:    stop,
-                    line:          routeModel,
+                    parentStop:    parent,
+                    line:          model,
                     isSelected:    true,
                     isFavorited:   true,
-                    onTap:         { navigate(to: routeModel) },
+                    onTap:         { navigate(to: model) },
                     onFavoriteTapped: {
-                        favoriteRouteIDs.remove(routeModel.routeId)
+                        favoritesManager.toggle(model)
+                        focusedRouteID = nil
                     }
                 )
                 .padding()
                 .background(Color(.secondarySystemBackground).opacity(0.8))
                 .cornerRadius(12)
 
-                Text("Tap the card again to continue, or Cancel below")
+                Text("Tap again to confirm, or Cancel below")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
@@ -140,7 +139,28 @@ struct FavoritesView: View {
         }
     }
 
+    // MARK: – Helpers
 
+    /// Only group favorites for stops we actually have loaded
+    private var groupedRoutes: [Int: [Route]] {
+        let valid = favoritesManager.routes.filter { fav in
+            stopVM.allStops.contains(where: { $0.id == fav.stopId })
+        }
+        return Dictionary(grouping: valid, by: \.stopId)
+    }
+
+    /// Human-readable stop name, or fallback
+    private func stopName(for stopId: Int) -> String {
+        stopVM.allStops.first(where: { $0.id == stopId })?.name
+        ?? "Stop \(stopId)"
+    }
+
+    /// Safely look up the Stop for a given Route
+    private func parentStop(for route: Route) -> Stop? {
+        stopVM.allStops.first(where: { $0.id == route.stopId })
+    }
+
+    /// Tap once to highlight (for overlay), tap again to navigate
     private func confirmOrHighlight(_ route: Route) {
         if focusedRouteID == route.routeId {
             navigate(to: route)
@@ -149,9 +169,24 @@ struct FavoritesView: View {
         }
     }
 
+    /// Navigate to detail view
     private func navigate(to route: Route) {
         focusedRouteID = nil
-        navPath.append(route)
+        navigationPath.append(route)
         timeManager.startTimer()
+    }
+}
+
+// MARK: – Preview
+
+struct FavoritesView_Previews: PreviewProvider {
+    static var previews: some View {
+        FavoritesView(
+            favoritesManager: FavoritesManager(),
+            stopVM:            StopViewModel(),
+            timeManager:       TimeManager(),
+            navigationPath:    .constant(NavigationPath())
+        )
+        .preferredColorScheme(.dark)
     }
 }

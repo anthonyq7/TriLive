@@ -1,6 +1,6 @@
 import Foundation
 
-struct Arrival: Identifiable, Decodable {
+struct Arrival: Identifiable, Decodable, Equatable {
   let id = UUID()
   let routeId:    Int
   let routeName:  String

@@ -1,95 +1,196 @@
+//
+//  HomeView.swift
+//  TriLive
+//
+//  Created by Anthony Qin on 6/6/25.
+//
+
 import SwiftUI
 import CoreLocation
 
 struct HomeView: View {
+    // MARK: – Injected
+    @ObservedObject var favoritesManager: FavoritesManager
+    @ObservedObject var stopVM:            StopViewModel
+    @ObservedObject var timeManager:       TimeManager
+    @ObservedObject var locationManager:   LocationManager
+    @Binding       var navigationPath:     NavigationPath
     @Binding var favoriteRouteIDs: Set<Int>
-    @ObservedObject var locationManager: LocationManager
-    @ObservedObject var timeManager: TimeManager
-    @Binding var navigationPath: NavigationPath
-    @ObservedObject var stopVM: StopViewModel
-    @Binding var selectedStop: Stop?
+
     
+    // MARK: – Local
     @State private var searchQuery       = ""
     @FocusState private var isSearchFocused: Bool
     @State private var focusedRouteID: Int?
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                ExtractedLogoAndWelcomeView()
-                
-                SearchBar(
-                    locationManager: locationManager,
-                    searchQuery:     $searchQuery,
-                    stopSelected:    Binding(
-                        get:  { stopVM.selectedStop != nil },
-                        set:  { _ in }
-                    ),
-                    selectedStop:    $stopVM.selectedStop,
-                    stopList:        stopVM.filteredStops,
-                    isFocused:       $isSearchFocused
-                )
-                .onChange(of: searchQuery, perform: stopVM.filter)
-                .zIndex(1)
-                
-                // only show when a stop is chosen
-                if let stop = stopVM.selectedStop {
-                    LazyVStack(spacing: 12) {
-                        ForEach(stopVM.routes) { route in
-                            RouteCard(
-                                parentStop:  stop,
-                                line:        route,
-                                isSelected:  focusedRouteID == route.routeId,
-                                isFavorited: favoriteRouteIDs.contains(route.routeId),
-                                onTap:       { confirmOrHighlight(route) },
-                                onFavoriteTapped: { toggleFavorite(route) },
-                            )
-                            .padding(.horizontal, 12)
+        ZStack {
+            Color("AppBackground")
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    ExtractedLogoAndWelcomeView()
+                    
+                    // Your original SearchBar
+                    SearchBar(
+                        locationManager: locationManager,
+                        searchQuery:     $searchQuery,
+                        stopSelected:    Binding(
+                            get:  { stopVM.selectedStop != nil },
+                            set:  { _ in }
+                        ),
+                        selectedStop:    $stopVM.selectedStop,
+                        stopList:        stopVM.filteredStops,
+                        isFocused:       $isSearchFocused
+                    )
+                    .onChange(of: searchQuery, perform: stopVM.filter)
+                    .zIndex(1)
+                    
+                    // Only show when a stop is chosen
+                    if let stop = stopVM.selectedStop {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(stop.name)
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                            
+                            LazyVStack(spacing: 12) {
+                                ForEach(stopVM.routes) { route in
+                                    RouteCard(
+                                        parentStop:  stop,
+                                        line:        route,
+                                        isSelected:  focusedRouteID == route.routeId,
+                                        isFavorited: favoriteRouteIDs.contains(route.routeId),
+                                        onTap:       { confirmOrHighlight(route) },
+                                        onFavoriteTapped: { toggleFavorite(route) }
+                                    )
+                                    .padding(.horizontal, 12)
+                                }
+                            }
+                            .animation(.easeIn, value: stopVM.routes)
+                            .padding(.bottom, 24)
                         }
                     }
-                    .animation(.easeIn, value: stopVM.routes)
-                    .padding(.top, 12)
+                    
+                    Spacer(minLength: 50)
                 }
-                
-                Spacer()
+                .padding(.top, 24)
             }
-            .padding(.top, 24)
+            
+            // MARK: – Confirm overlay
+            selectionOverlay
         }
-        .onTapGesture {
-            isSearchFocused = false
-        }
-        .background(Color("AppBackground").ignoresSafeArea())
+        // MARK: – Lifecyle & bindings
+        
+        // Load stops once
         .onAppear { Task { await stopVM.loadStops() } }
+        
+        // Dismiss keyboard
+        .onTapGesture { isSearchFocused = false }
+        
+        // Poll / clear when selectedStop changes
+        .onChange(of: stopVM.selectedStop) { newStop in
+            if let s = newStop {
+                stopVM.startPollingArrivals(for: s)
+            } else {
+                stopVM.stopPollingArrivals()
+                stopVM.arrivals = []
+                stopVM.routes   = []
+            }
+            // also clear any half-tapped overlay
+            focusedRouteID = nil
+        }
+        
+        // Error alert on loadStops
         .alert("Error loading stops", isPresented: $stopVM.showError) {
             Button("OK", role: .cancel) { stopVM.showError = false }
         } message: {
             Text(stopVM.errorMessage ?? "Unknown")
         }
-        .onChange(of: stopVM.selectedStop) {
-            if let s = $0 { stopVM.startPollingArrivals(for: s) }
-            else      { stopVM.stopPollingArrivals(); stopVM.arrivals=[]; stopVM.routes=[] }
-        }
+        
+        // Navigation on confirm
         .navigationDestination(for: Route.self) { route in
             if let parent = stopVM.selectedStop {
                 RouteDetailView(
-                    parentStop: parent,
-                    route:      route,
-                    stopVM:     stopVM,
-                    navPath:    $navigationPath,
+                    parentStop:  parent,
+                    route:       route,
+                    stopVM:      stopVM,
+                    navPath:     $navigationPath,
                     timeManager: timeManager
                 )
             }
         }
     }
     
+    // MARK: – Overlay builder
+    @ViewBuilder
+    private var selectionOverlay: some View {
+        if let stop = stopVM.selectedStop,
+           let rid  = focusedRouteID,
+           let arrival = stopVM.arrivals.first(where: { $0.routeId == rid }) {
+            
+            VisualEffectBlur(blurStyle: .systemThinMaterialDark)
+                .ignoresSafeArea()
+                .zIndex(1)
+            
+            VStack(spacing: 16) {
+                let model = Route(
+                    stopId:     stop.id,
+                    routeId:    arrival.routeId,
+                    routeName:  arrival.routeName,
+                    status:     arrival.status,
+                    eta:        "\(arrival.minutesUntilArrival)",
+                    routeColor: arrival.routeColor,
+                    eta_unix:   arrival.eta
+                )
+                
+                RouteCard(
+                    parentStop:  stop,
+                    line:        model,
+                    isSelected:  true,
+                    isFavorited: favoriteRouteIDs.contains(model.routeId),
+                    onTap:       { navigate(to: model) },
+                    onFavoriteTapped: {
+                        toggleFavorite(model)
+                        focusedRouteID = nil
+                    }
+                )
+                .padding()
+                .background(Color(.secondarySystemBackground).opacity(0.8))
+                .cornerRadius(12)
+                
+                Text("Tap again to confirm, or Cancel below")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                
+                Button("Cancel") {
+                    focusedRouteID = nil
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 24)
+                .background(Color(.systemBackground))
+                .cornerRadius(8)
+            }
+            .zIndex(2)
+        }
+    }
+    
+    // MARK: – Helpers
     private func confirmOrHighlight(_ route: Route) {
         if focusedRouteID == route.routeId {
-            navigationPath.append(route)
-            focusedRouteID = nil
-            timeManager.startTimer()
+            navigate(to: route)
         } else {
             focusedRouteID = route.routeId
         }
+    }
+    
+    private func navigate(to route: Route) {
+        focusedRouteID = nil
+        navigationPath.append(route)
+        timeManager.startTimer()
     }
     
     private func toggleFavorite(_ route: Route) {
@@ -99,4 +200,25 @@ struct HomeView: View {
             favoriteRouteIDs.insert(route.routeId)
         }
     }
+}
+
+struct HomeView_Previews: PreviewProvider {
+  static var previews: some View {
+    // create one instance of each dependency
+    let favs    = FavoritesManager()
+    let stops   = StopViewModel()
+    let times   = TimeManager()
+    let locs    = LocationManager()
+    let path    = Binding.constant(NavigationPath())
+
+      HomeView(
+        favoritesManager: favs,
+        stopVM:           stops,
+        timeManager:      times,
+        locationManager:  locs,
+        navigationPath:   path,
+        favoriteRouteIDs: .constant([])   // ← add this!
+      )
+    .preferredColorScheme(.dark)
+  }
 }
