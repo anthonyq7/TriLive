@@ -118,7 +118,10 @@ See TriLive Mockups.pdf in the repo root for UI/UX wireframes and flow diagrams.
 
 ---
 ## Contact
+
 Brian Maina – github.com/brianmmaina – bmmaina@bu.edu
+
 Anthony Qin – github.com/anthonyq7 – a.j.qin@wustl.edu
+
 ---
 
