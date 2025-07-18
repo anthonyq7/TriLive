@@ -190,3 +190,4 @@ struct FavoritesView_Previews: PreviewProvider {
         .preferredColorScheme(.dark)
     }
 }
+

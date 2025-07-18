@@ -93,19 +93,22 @@ struct RouteDetailView: View {
     }
     
     private var stopButton: some View {
-        Button("Stop") {
+        Button{
             isLiveActive = false
             timeManager.stopTimer()
             stopVM.stopPollingArrivals()
             navPath.removeLast()
+        } label: {
+            Text("Stop")
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.red)
+                .cornerRadius(25)
+                .padding(.horizontal)
         }
-        .font(.headline)
-        .foregroundColor(.white)
-        .frame(maxWidth: 300)
-        .padding()
-        .background(Color.red)
-        .cornerRadius(25)
-        .padding(.horizontal)
+        .buttonStyle(PlainButtonStyle())
     }
     
     private var liveActivitySection: some View {
@@ -248,6 +251,7 @@ struct LiveActivityCard: View {
                 Spacer()
                 Text("ETA: " + convertUnixToTime(Int(nextArrivalUnix)))
                     .font(.subheadline)
+                
             }
             
             Text("Your ride will be here in \(Int(etaUnixSeconds - CurrentUnixTime)/60 >= 1 ? String(Int(etaUnixSeconds - CurrentUnixTime)/60) : "<1") min\(Int(etaUnixSeconds - CurrentUnixTime)/60 <= 1 ? "" : "s")")
@@ -265,7 +269,7 @@ struct LiveActivityCard: View {
                 }
         }
         .padding()
-        .background(Color("AppBackground").opacity(0.8))
+        .background(Color.clear)
         .cornerRadius(8)
         .foregroundColor(.white)
     }

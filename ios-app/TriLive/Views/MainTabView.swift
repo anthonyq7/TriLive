@@ -11,17 +11,20 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView(
-                favoritesManager: favoritesManager,
-                stopVM:           stopVM,
-                timeManager:      timeManager,
-                locationManager:  locationManager,
-                navigationPath:   $navigationPath,
-                favoriteRouteIDs:  $favoritesManager.favoriteRouteIDs
-            )
+            NavigationStack(path: $navigationPath){
+                HomeView(
+                    favoritesManager: favoritesManager,
+                    stopVM:           stopVM,
+                    timeManager:      timeManager,
+                    locationManager:  locationManager,
+                    navigationPath:   $navigationPath,
+                    favoriteRouteIDs:  $favoritesManager.favoriteRouteIDs
+                )
+            }
             .tabItem { Label("Home", systemImage: "house.fill") }
             .tag(TabSelection.home)
-
+            
+            /*
             FavoritesView(
                 favoritesManager: favoritesManager,
                 stopVM:           stopVM,
@@ -29,9 +32,11 @@ struct MainTabView: View {
                 navigationPath:   $navigationPath
             )
             .tabItem { Label("Favorites", systemImage: "star.fill") }
-            .tag(TabSelection.favorites)
-
-            SettingsView(locationManager: locationManager)
+            .tag(TabSelection.favorites)*/
+            
+            NavigationStack(path: $navigationPath){
+                SettingsView(locationManager: locationManager)
+            }
             .tabItem { Label("Settings", systemImage: "gearshape.fill") }
             .tag(TabSelection.settings)
         }
