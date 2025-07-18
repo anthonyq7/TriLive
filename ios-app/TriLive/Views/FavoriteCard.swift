@@ -75,7 +75,7 @@ struct FavoriteCard: View {
         lat:         45.512789,
         dist:        0,
         description: nil
-      )
+    )
     // sample Route
     let sampleRoute = Route(
         stopId: 2,

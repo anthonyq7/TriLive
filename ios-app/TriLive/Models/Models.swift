@@ -1,5 +1,5 @@
 import Foundation
-
+// model for a transit stop
 struct Stop: Codable, Identifiable, Equatable {
     // these map cleanly from snake_case via .convertFromSnakeCase
     let stopId:     Int
@@ -15,7 +15,7 @@ struct Stop: Codable, Identifiable, Equatable {
 }
 
 
-
+// model for a route arrival entry
 struct Route: Codable, Hashable, Identifiable {
   let stopId:     Int
   let routeId:    Int
@@ -27,7 +27,7 @@ struct Route: Codable, Hashable, Identifiable {
 
   var id: Int { routeId }
 }
-
+// model for a favorite route entry
 struct Favorite: Identifiable, Codable, Hashable {
   var id: UUID = .init()
   let parentStopName: String
@@ -35,10 +35,11 @@ struct Favorite: Identifiable, Codable, Hashable {
   let route: Route
 }
 
-
+// store for managing favorites in UserDefaults
 class FavoritesStore: ObservableObject {
   @Published private(set) var items: [Favorite] = []
 
+  // creates key for UserDefaults storage
   private let key = "favoriteRoutesData"
 
   init() {
@@ -50,6 +51,7 @@ class FavoritesStore: ObservableObject {
     }
   }
 
+  // adds or removes favorite, then saves
   func toggle(_ fav: Favorite) {
     if let idx = items.firstIndex(of: fav) {
       items.remove(at: idx)
@@ -59,6 +61,7 @@ class FavoritesStore: ObservableObject {
     save()
   }
 
+   // encodes items as JSON and writes to UserDefaults
   private func save() {
     if let data = try? JSONEncoder().encode(items) {
       UserDefaults.standard.set(data, forKey: key)
@@ -66,6 +69,7 @@ class FavoritesStore: ObservableObject {
   }
 
   func contains(_ fav: Favorite) -> Bool {
+    // returns whether a favorite is already in the store
     items.contains(fav)
   }
 }

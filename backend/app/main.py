@@ -5,11 +5,8 @@ from sqlalchemy import delete
 import anyio
 
 import os
-import datetime
-import time
 import json
 import asyncio
-import zoneinfo
 
 import httpx
 import redis
@@ -42,20 +39,33 @@ database.Base.metadata.create_all(bind=database.engine)
 REDIS_URL=os.getenv("REDIS_URL")
 redis_client = redis.from_url(REDIS_URL)
 
+# sample default coordinates
 longitude= -122.6765
 latitude = 45.5231
 
 @app.get("/ping")
 async def ping():
+    """
+    health check endpoint
+    returns status ok
+    """
     return {"status": "ok"}
 
 @app.get("/")
 async def root():
+    """
+    root endpoint
+    returns welcome message
+    """
     return {"message" : "Welcome to TriLive!"}
 
 #returns arrivals follwing the route pyndantic models
 @app.get("/arrivals/{stop_id}")
 async def get_arrivals(stop_id: int):
+    """
+    fetches arrival data from Trimet API or Redis cache,
+    filters for estimated/scheduled status, caches results for 60s
+    """
     url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&showPosition=true&minutes=60"
     cache_key = f"stop:{stop_id}:arrivals"
     cached_data = redis_client.get(cache_key)
@@ -92,6 +102,9 @@ async def get_arrivals(stop_id: int):
 
 @app.get("/stops")
 async def get_stops():
+    """
+    returns all stop records from the database
+    """
     db = database.SessionLocal()
     try:
         toReturn = db.query(database.Stop).all()
@@ -101,6 +114,10 @@ async def get_stops():
     
 @app.get("/stops/closest/{latitude}/{longitude}", response_model=models.Station) #gets closest stop
 async def get_closest_stop(longitude: float, latitude: float):
+    """
+    fetches nearest stop from Trimet API based on lat/lon
+    returns a Station pydantic model
+    """
     radius = 4800 #radius of 4.8 km or roughly 3 miles
     url = f"https://developer.trimet.org/ws/V2/stops?appID={TRIMET_APP_ID}&ll={longitude},{latitude}&meters={radius}&maxStops=1&json=true"
 
@@ -144,6 +161,10 @@ def timeMinsLeft(ms_timestamp: int):
 
 
 async def fetch_stops():
+    """
+    fetches all stops within a hardcoded bbox from Trimet API
+    returns list of Station models
+    """
     url = (
         f"https://developer.trimet.org/ws/v2/stops"
         f"?appID={TRIMET_APP_ID}"
@@ -175,11 +196,19 @@ async def fetch_stops():
 
 
 async def sync_stop_table():
+    """
+    orchestrates fetching stops and syncing DB in background thread
+    """
     stops = await fetch_stops()
     # run the blocking DB sync on a thread
     await anyio.to_thread.run_sync(_sync_stops, stops)
 
 def _sync_stops(stops):
+    """
+    syncs the StopTable:
+    - inserts new stops
+    - deletes removed stops
+    """
     ids = [s.stop_id for s in stops]
     db = database.SessionLocal()
     try:
@@ -216,6 +245,9 @@ def _sync_stops(stops):
 
 @app.put("/sync_stops")
 async def sync_stops():
+    """
+    manual trigger for stop table sync via HTTP request
+    """
     try:
         await sync_stop_table()
         return {"message": "Stops successfully synced"}
@@ -224,6 +256,12 @@ async def sync_stops():
     
 @app.websocket("/track/{stop_id}/{route_id}")
 async def track(ws: WebSocket, stop_id: int, route_id: int):
+    """
+    tracks distance updates over websocket:
+    - accepts ws
+    - polls Trimet API every 30s
+    - sends distance in feet until arrival or disconnect
+    """
     await ws.accept()
 
     url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"

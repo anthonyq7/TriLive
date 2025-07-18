@@ -87,9 +87,9 @@ struct FavoritesView: View {
     @ViewBuilder
     private var selectionOverlay: some View {
         if let rid = focusedRouteID,
-           let route = favoritesManager.routes.first(where: { $0.routeId == rid }),
-           let parent = parentStop(for: route),
-           let arrival = stopVM.arrivals.first(where: { $0.routeId == rid })
+            let route = favoritesManager.routes.first(where: { $0.routeId == rid }),
+            let parent = parentStop(for: route),
+            let arrival = stopVM.arrivals.first(where: { $0.routeId == rid })
         {
             VisualEffectBlur(blurStyle: .systemThinMaterialDark)
                 .ignoresSafeArea()
@@ -139,7 +139,7 @@ struct FavoritesView: View {
         }
     }
 
-    // MARK: – Helpers
+    //Helpers
 
     /// Only group favorites for stops we actually have loaded
     private var groupedRoutes: [Int: [Route]] {
