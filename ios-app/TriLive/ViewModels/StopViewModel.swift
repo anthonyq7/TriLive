@@ -118,7 +118,7 @@ final class StopViewModel: ObservableObject {
         timer?.cancel()
         Task { await loadArrivals(for: stop) }
         timer = Timer
-            .publish(every: 30, on: .main, in: .common)
+            .publish(every: 15, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 Task { await self?.loadArrivals(for: stop) }
