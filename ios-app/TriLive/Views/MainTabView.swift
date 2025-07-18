@@ -1,60 +1,52 @@
 import SwiftUI
 
 struct MainTabView: View {
-    // persist favorites locally
-    @AppStorage("favoriteRoutesData") private var favoriteRoutesData: Data = Data()
-    private var favoriteRouteIDs: Binding<Set<Int>> {
-        Binding(
-            get: {
-                (try? JSONDecoder().decode(Set<Int>.self, from: favoriteRoutesData)) ?? []
-            },
-            set: { newValue in
-                favoriteRoutesData = (try? JSONEncoder().encode(newValue)) ?? Data()
-            }
-        )
-    }
+    @ObservedObject var favoritesManager: FavoritesManager
+    @ObservedObject var stopVM:           StopViewModel
+    @ObservedObject var timeManager:      TimeManager
+    @ObservedObject var locationManager:  LocationManager
 
-    // shared managers & VMs
-    @StateObject private var locationManager = LocationManager()
-    @StateObject private var timeManager     = TimeManager()
-    @StateObject private var stopVM          = StopViewModel()
-    @State private var selectedStop: Stop? = nil
-
-    // nav paths
-    @State private var homePath = NavigationPath()
-    @State private var favsPath = NavigationPath()
+    @Binding var navigationPath: NavigationPath
+    @Binding var selectedTab:    TabSelection
 
     var body: some View {
-        TabView {
-            // Home tab
-            NavigationStack(path: $homePath) {
-                HomeView(
-                    favoriteRouteIDs: favoriteRouteIDs,
-                    locationManager:  locationManager,
-                    timeManager:      timeManager,
-                    navigationPath:   $homePath,
-                    stopVM:           stopVM,
-                    selectedStop:     $selectedStop
-                )
-            }
-            .tabItem { Label("Home", systemImage: "bus.fill") }
-
-            // Favorites tab
-            NavigationStack(path: $favsPath) {
-              FavoritesView(
-                favoriteRouteIDs: favoriteRouteIDs,
-                selectedStop:     $selectedStop,
-                navPath:          $favsPath,
+        TabView(selection: $selectedTab) {
+            HomeView(
+                favoritesManager: favoritesManager,
+                stopVM:           stopVM,
                 timeManager:      timeManager,
-                stopVM:           stopVM
-              )
-            }
-            .tabItem { Label("Favorites", systemImage: "star.fill") }
+                locationManager:  locationManager,
+                navigationPath:   $navigationPath,
+                favoriteRouteIDs:  $favoritesManager.favoriteRouteIDs
+            )
+            .tabItem { Label("Home", systemImage: "house.fill") }
+            .tag(TabSelection.home)
 
-            // Settings tab
-            SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+            FavoritesView(
+                favoritesManager: favoritesManager,
+                stopVM:           stopVM,
+                timeManager:      timeManager,
+                navigationPath:   $navigationPath
+            )
+            .tabItem { Label("Favorites", systemImage: "star.fill") }
+            .tag(TabSelection.favorites)
+
+            SettingsView(locationManager: locationManager)
+            .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+            .tag(TabSelection.settings)
+        }
+        .onChange(of: selectedTab) { tab in
+            // When you go to Favorites, restart polling on all your favorites’ stops:
+            if tab == .favorites {
+                let stops = Set(favoritesManager.routes.map(\.stopId))
+                for sid in stops {
+                    if let s = stopVM.allStops.first(where: { $0.id == sid }) {
+                        stopVM.startPollingArrivals(for: s)
+                    }
+                }
+            }
         }
         .preferredColorScheme(.dark)
     }
 }
+
