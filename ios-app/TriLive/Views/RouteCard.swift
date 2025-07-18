@@ -51,12 +51,13 @@ struct RouteCard: View {
                     .lineLimit(1)
                     .frame(width: 80)
                 
+                /*
                 Button(action: onFavoriteTapped) {
                     Image(systemName: isFavorited ? "star.fill" : "star")
                         .foregroundColor(isFavorited ? .yellow : .white)
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 12)
+                .padding(.trailing, 12)*/
             }
         }
         .padding(.vertical, 12)

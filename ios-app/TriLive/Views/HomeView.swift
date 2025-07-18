@@ -21,7 +21,7 @@ struct HomeView: View {
     // MARK: – Local
     @State private var searchQuery       = ""
     @FocusState private var isSearchFocused: Bool
-    @State private var focusedRouteID: Int?
+    @State private var focusedRoute: Route?
     
     var body: some View {
         ZStack {
@@ -60,7 +60,7 @@ struct HomeView: View {
                                     RouteCard(
                                         parentStop:  stop,
                                         line:        route,
-                                        isSelected:  focusedRouteID == route.routeId,
+                                        isSelected:  focusedRoute == route,
                                         isFavorited: favoriteRouteIDs.contains(route.routeId),
                                         onTap:       { confirmOrHighlight(route) },
                                         onFavoriteTapped: { toggleFavorite(route) }
@@ -99,7 +99,7 @@ struct HomeView: View {
                 stopVM.routes   = []
             }
             // also clear any half-tapped overlay
-            focusedRouteID = nil
+            focusedRoute = nil
         }
         
         // Error alert on loadStops
@@ -127,8 +127,8 @@ struct HomeView: View {
     @ViewBuilder
     private var selectionOverlay: some View {
         if let stop = stopVM.selectedStop,
-           let rid  = focusedRouteID,
-           let arrival = stopVM.arrivals.first(where: { $0.routeId == rid }) {
+           let r  = focusedRoute,
+           let arrival = stopVM.arrivals.first(where: { $0.routeId == r.id && $0.eta == r.eta_unix}) {
             
             VisualEffectBlur(blurStyle: .systemThinMaterialDark)
                 .ignoresSafeArea()
@@ -153,11 +153,11 @@ struct HomeView: View {
                     onTap:       { navigate(to: model) },
                     onFavoriteTapped: {
                         toggleFavorite(model)
-                        focusedRouteID = nil
+                        focusedRoute = nil
                     }
                 )
                 .padding()
-                .background(Color(.secondarySystemBackground).opacity(0.8))
+                //.background(Color(.secondarySystemBackground).opacity(0.8))
                 .cornerRadius(12)
                 
                 Text("Tap again to confirm, or Cancel below")
@@ -167,7 +167,7 @@ struct HomeView: View {
                     .padding(.horizontal, 16)
                 
                 Button("Cancel") {
-                    focusedRouteID = nil
+                    focusedRoute = nil
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 24)
@@ -180,17 +180,17 @@ struct HomeView: View {
     
     // MARK: – Helpers
     private func confirmOrHighlight(_ route: Route) {
-        if focusedRouteID == route.routeId {
+        if focusedRoute == route{
             navigate(to: route)
         } else {
-            focusedRouteID = route.routeId
+            focusedRoute = route
         }
     }
     
     private func navigate(to route: Route) {
-        focusedRouteID = nil
         navigationPath.append(route)
         timeManager.startTimer()
+        focusedRoute = nil
     }
     
     private func toggleFavorite(_ route: Route) {

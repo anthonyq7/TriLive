@@ -41,6 +41,7 @@ struct SearchBar: View {
                     selectedStop  = nil
                 }
             }
+            
 
             //Dropdown
             if isFocused && !stopList.isEmpty {
@@ -53,9 +54,12 @@ struct SearchBar: View {
                             Image(systemName: "location.fill")
                         }
                         .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .foregroundColor(.primary)
                         .background(Color(.systemBackground))
                         .onTapGesture {
+                            stopSelected = false
+                            selectedStop = nil
                             selectNearestStop()
                             isFocused = false
                         }
