@@ -18,16 +18,18 @@ struct SearchBar: View {
                     .submitLabel(.search)
                     .onSubmit(performSearch)
                     .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(.secondarySystemBackground))
-                    )
-                    .foregroundColor(.primary)
+                
+                Spacer()
 
                 Image(systemName: "magnifyingglass")
                     .padding(.horizontal, 16)
                     .onTapGesture { performSearch() }
             }
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .foregroundColor(.primary)
             .padding(.horizontal)
             .onChange(of: searchQuery) { _ in
                 // break concatenation into vars
@@ -54,8 +56,8 @@ struct SearchBar: View {
                         .foregroundColor(.primary)
                         .background(Color(.systemBackground))
                         .onTapGesture {
-                            isFocused = false
                             selectNearestStop()
+                            isFocused = false
                         }
                         Divider()
 
@@ -153,7 +155,8 @@ struct SearchBar: View {
         }) else { return }
 
         // selects it
-        searchQuery  = nearest.name
+        let nearestDir = nearest.dir ?? ""
+        searchQuery  = nearest.name + " " + dirMapper(nearestDir)
         selectedStop = nearest
         stopSelected = true
         isFocused    = false
