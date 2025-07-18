@@ -46,6 +46,12 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
                                 │
                            Docker Compose
 
+- **Frontend**: SwiftUI, Combine, Core Location, XCTest  
+- **Backend**: FastAPI, Pydantic, SQLAlchemy, Alembic, Uvicorn  
+- **Database**: PostgreSQL  
+- **Cache**: Redis  
+- **Containers**: Docker & Docker Compose  
+
 
 ## Getting Started
 
