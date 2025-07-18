@@ -11,9 +11,8 @@
 3. [Architecture & Tech Stack](#architecture--tech-stack)  
 4. [Getting Started](#getting-started)  
    - [Prerequisites](#prerequisites)  
-5. [Directory Structure](#directory-structure)  
-6. [Design Assets](#design-assets)  
-7. [Contact](#contact)  
+5. [Design Assets](#design-assets)  
+6. [Contact](#contact)  
 
 ---
 
@@ -34,18 +33,6 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 ---
 
 ## Architecture & Tech Stack
-
-┌────────┐     HTTPS      ┌───────────┐      ┌───────────┐
-│  iOS   │ ──────────────► │  FastAPI  │ ◄────│  iOS App  │
-│ SwiftUI│                 │  Backend  │      │  (Swift)  │
-└────────┘                 └───────────┘      └───────────┘
-                                │
-         ┌─────────────┐        │         ┌─────────┐
-         │  PostgreSQL │ ◄──────┼───────► │  Redis  │
-         └─────────────┘   data │ cache  │ (in-mem) │
-                                │
-                           Docker Compose
-
 - **Frontend**: SwiftUI, Combine, Core Location, XCTest  
 - **Backend**: FastAPI, Pydantic, SQLAlchemy, Alembic, Uvicorn  
 - **Database**: PostgreSQL  
@@ -60,19 +47,6 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 - macOS with **Xcode 13+**  
 - **Docker** & **Docker Compose**  
 - (Optional) **Python 3.10+** for manual backend runs
-
-## Directory Structure
-TriLive/
-├── backend/               # FastAPI server
-│   ├
-│   ├── app/               # routes, models, services
-│   ├── Dockerfile
-│   └── requirements.txt
-├── ios-app/               # SwiftUI Xcode project
-│   └── TriLive.xcodeproj
-├
-├── docker-compose.yml
-└── TriLive Mockups.pdf    # design wireframes
 
 ## Design Assets
 See TriLive Mockups.pdf in the repo root for UI/UX wireframes and flow diagrams.
