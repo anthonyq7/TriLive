@@ -56,7 +56,7 @@ struct SettingsCard: View {
     }
 }
 
-// MARK: – Settings screen itself
+// Settings screen itself
 struct SettingsView: View {
     @ObservedObject var locationManager: LocationManager   // inject your manager here
 

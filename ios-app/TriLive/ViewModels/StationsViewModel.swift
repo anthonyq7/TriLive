@@ -15,12 +15,16 @@ final class StationsViewModel: ObservableObject {
   private let api = APIClient()
 
   func loadStations() async {
+    // creates flag set before network call
     isLoading = true
     defer    { isLoading = false }
+    // creates flag reset after method exits
 
     do {
+      // creates async fetch and assigns results
       stations = try await api.fetchStops()
     } catch {
+      // creates error handling and message set
       errorMessage = error.localizedDescription
     }
   }

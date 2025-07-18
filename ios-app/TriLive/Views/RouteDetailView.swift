@@ -60,7 +60,7 @@ struct RouteDetailView: View {
         }
     }
     
-    // MARK: – Subviews
+    // Subviews
     
     private var header: some View {
         HStack(spacing: 16) {
@@ -288,7 +288,7 @@ func convertUnixToTime(_ unixTime: Int) -> String{
     return Formatter.string(from: date)
 }
 
-// MARK: – Preview
+//Preview
 
 struct RouteDetailView_Previews: PreviewProvider {
     static var previews: some View {

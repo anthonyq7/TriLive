@@ -28,23 +28,23 @@ final class StopViewModel: ObservableObject {
     
     func loadStops() async {
           // bail out if we’ve already done this once
-          guard !hasLoadedStops else { return }
-          hasLoadedStops = true
+        guard !hasLoadedStops else { return }
+        hasLoadedStops = true
 
-          isLoading     = true
-          showError     = false
-          errorMessage  = nil
+        isLoading     = true
+        showError     = false
+        errorMessage  = nil
 
-          do {
+        do {
             let stops = try await api.fetchStops()
             allStops      = stops
             filteredStops = stops
-          } catch {
+        } catch {
             errorMessage = error.localizedDescription
             showError    = true
-          }
+        }
 
-          isLoading = false
+        isLoading = false
         }
     
     //Filter the list of stops

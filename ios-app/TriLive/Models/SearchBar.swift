@@ -133,7 +133,7 @@ struct SearchBar: View {
         stopSelected = true
         isFocused    = false
     }
-    
+    // creates shorthand for direction labels
     private func dirMapper(_ dir: String) -> String {
         switch dir {
         case "Northbound": return "N"
@@ -149,7 +149,7 @@ struct SearchBar: View {
         guard let coord = locationManager.location else { return }
         // wraps it in a CLLocation so we can measure distance
         let userLoc = CLLocation(latitude: coord.latitude,
-                                 longitude: coord.longitude)
+                                longitude: coord.longitude)
 
         // finds the nearest stop by comparing distances
         guard let nearest = stopList.min(by: { s1, s2 in

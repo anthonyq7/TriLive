@@ -32,8 +32,8 @@ struct APIClient {
     // fetch arrivals from GET /arrivals/{stop_id}
     func fetchArrivals(for stopId: Int) async throws -> [Arrival] {
         let url = baseURL
-          .appendingPathComponent("arrivals")
-          .appendingPathComponent("\(stopId)")
+        .appendingPathComponent("arrivals")
+        .appendingPathComponent("\(stopId)")
         let (data, resp) = try await URLSession.shared.data(from: url)
         guard let http = resp as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
             throw URLError(.badServerResponse)
@@ -49,21 +49,21 @@ struct APIClient {
         var arrivals: [Arrival] = []
         for (_, value) in top {
             guard let dict = value as? [String: Any],
-                  let rid   = dict["route_id"]   as? Int,
-                  let name  = dict["route_name"] as? String,
-                  let status = dict["status"]    as? String,
-                  let eta    = dict["eta"]       as? Int,
-                  let color  = dict["route_color"] as? String
+                let rid   = dict["route_id"]   as? Int,
+                let name  = dict["route_name"] as? String,
+                let status = dict["status"]    as? String,
+                let eta    = dict["eta"]       as? Int,
+                let color  = dict["route_color"] as? String
             else {
                 print("⚠️ Skipping malformed arrival entry:", value)
                 continue
             }
             let a = Arrival(
-              routeId:    rid,
-              routeName:  name,
-              status:     status,
-              eta:        eta,
-              routeColor: color
+                routeId:    rid,
+                routeName:  name,
+                status:     status,
+                eta:        eta,
+                routeColor: color
             )
             arrivals.append(a)
         }

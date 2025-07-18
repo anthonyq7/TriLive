@@ -9,7 +9,7 @@ import SwiftUI
 import CoreLocation
 
 struct HomeView: View {
-    // MARK: – Injected
+    // Injected
     @ObservedObject var favoritesManager: FavoritesManager
     @ObservedObject var stopVM:            StopViewModel
     @ObservedObject var timeManager:       TimeManager
@@ -18,7 +18,7 @@ struct HomeView: View {
     @Binding var favoriteRouteIDs: Set<Int>
 
     
-    // MARK: – Local
+    // Local
     @State private var searchQuery       = ""
     @FocusState private var isSearchFocused: Bool
     @State private var focusedRoute: Route?
@@ -78,10 +78,10 @@ struct HomeView: View {
                 .padding(.top, 24)
             }
             
-            // MARK: – Confirm overlay
+            // Confirm overlay
             selectionOverlay
         }
-        // MARK: – Lifecyle & bindings
+        // Lifecyle & bindings
         
         // Load stops once
         .onAppear { Task { await stopVM.loadStops() } }
@@ -123,12 +123,12 @@ struct HomeView: View {
         }
     }
     
-    // MARK: – Overlay builder
+    // Overlay builder
     @ViewBuilder
     private var selectionOverlay: some View {
         if let stop = stopVM.selectedStop,
-           let r  = focusedRoute,
-           let arrival = stopVM.arrivals.first(where: { $0.routeId == r.id && $0.eta == r.eta_unix}) {
+            let r  = focusedRoute,
+            let arrival = stopVM.arrivals.first(where: { $0.routeId == r.id && $0.eta == r.eta_unix}) {
             
             VisualEffectBlur(blurStyle: .systemThinMaterialDark)
                 .ignoresSafeArea()
@@ -178,7 +178,7 @@ struct HomeView: View {
         }
     }
     
-    // MARK: – Helpers
+    // Helpers
     private func confirmOrHighlight(_ route: Route) {
         if focusedRoute == route{
             navigate(to: route)
@@ -203,7 +203,7 @@ struct HomeView: View {
 }
 
 struct HomeView_Previews: PreviewProvider {
-  static var previews: some View {
+    static var previews: some View {
     // create one instance of each dependency
     let favs    = FavoritesManager()
     let stops   = StopViewModel()
@@ -211,14 +211,14 @@ struct HomeView_Previews: PreviewProvider {
     let locs    = LocationManager()
     let path    = Binding.constant(NavigationPath())
 
-      HomeView(
+    HomeView(
         favoritesManager: favs,
         stopVM:           stops,
         timeManager:      times,
         locationManager:  locs,
         navigationPath:   path,
-        favoriteRouteIDs: .constant([])   // ← add this!
-      )
+        favoriteRouteIDs: .constant([])   
+    )
     .preferredColorScheme(.dark)
-  }
+    }
 }

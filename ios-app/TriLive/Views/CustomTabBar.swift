@@ -19,7 +19,6 @@ struct CustomTabBar: View {
             }
         }
     }
-   
 }
 
 #Preview{

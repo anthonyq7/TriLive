@@ -17,10 +17,12 @@ struct Arrival: Identifiable, Decodable, Equatable {
   }
     
   var arrivalDate: Date {
+    // converts eta (ms) to a Date object
     Date(timeIntervalSince1970: Double(eta) / 1_000)
   }
     
   var minutesUntilArrival: Int {
+    // calculates minutes from now until arrival, non-negative
     let diff = arrivalDate.timeIntervalSinceNow
     return max(0, Int(diff / 60))
   }
