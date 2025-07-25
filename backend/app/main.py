@@ -315,6 +315,33 @@ async def track(ws: WebSocket, stop_id: int, route_id: int):
     finally:
         await ws.close()
 
+@app.get("/track_coords/{stop_id}/{route_id}")
+async def get_coords(stop_id: int, route_id: int):
+    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
+
+    try:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, details=str(e))
+    
+    lngLatData = {}
+
+    try:
+        for arrival in data.get("result_set", {}).get("blockPosition", []):
+            if arrival.get("routeNumber") == route_id:
+                lng = arrival.get("lng", 200)
+                lat = arrival.get("lat", 200)
+                
+                lngLatData["lng"] = lng
+                lngLatData["lat"] = lat
+
+                if lng != 200 and lat != 200:
+                    return lngLatData
+    except:
+        return {"error": "unable to get coordinates"}
+
 #added my routers from the previous backend
 app.include_router(station_router)
 
