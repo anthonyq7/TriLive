@@ -2,42 +2,36 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-// MARK: – UIKit share‐sheet wrapper for SwiftUI
+// UIKit share-sheet wrapper for SwiftUI
 struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
-    let applicationActivities: [UIActivity]? = nil
-
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(
-            activityItems: activityItems,
-            applicationActivities: applicationActivities
-        )
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
-
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-// MARK: – Reusable row: toggle or tappable button
+// Reusable settings row
 struct SettingsCard: View {
     let iconName: String
     let title: String
     var isToggle = false
     @Binding var toggleValue: Bool
-    var action: (() -> Void)? = nil
-
+    var action: (() -> Void)?
+    
     var body: some View {
         HStack {
             Image(systemName: iconName)
                 .font(.title2)
                 .frame(width: 32)
                 .foregroundColor(.accentColor)
-
+            
             Text(title)
                 .font(.body)
                 .foregroundColor(.white)
-
+            
             Spacer()
-
+            
             if isToggle {
                 Toggle("", isOn: $toggleValue)
                     .labelsHidden()
@@ -48,79 +42,71 @@ struct SettingsCard: View {
         }
         .padding()
         .background(Color("CardBackground"))
-        .cornerRadius(12)
-        .onTapGesture {
-            guard !isToggle else { return }
-            action?()
-        }
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+        .onTapGesture { if !isToggle { action?() } }
     }
 }
 
-// Settings screen itself
 struct SettingsView: View {
-    @ObservedObject var locationManager: LocationManager   // inject your manager here
-
-    // persisted toggles
+    @ObservedObject var locationManager: LocationManager
     @AppStorage("pushNotifications") private var pushNotifications = true
     @AppStorage("locationSharing")   private var locationSharing   = true
-
-    // sheet‐flag
     @State private var showShareSheet = false
-
+    
     var body: some View {
         ZStack {
-            Color.appBackground.ignoresSafeArea()
-
+            Color("AppBackground").ignoresSafeArea()
+            
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 32) {
                     // Header
                     HStack {
                         Text("Settings")
-                            .font(.system(size: 36, weight: .semibold))
+                            .font(.system(size: 34, weight: .semibold))
                             .foregroundColor(.white)
                         Spacer()
                     }
                     .padding(.horizontal)
-
-                    // Notifications
-                    VStack(spacing: 12) {
+                    
+                    // Notification section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Notifications")
                             .font(.headline)
                             .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                        
                         SettingsCard(
                             iconName: "bell.fill",
                             title: "Push Notifications",
                             isToggle: true,
-                            toggleValue: $pushNotifications
+                            toggleValue: $pushNotifications,
+                            action: nil
                         )
                     }
                     .padding(.horizontal)
-
-                    // Privacy
-                    VStack(spacing: 12) {
+                    
+                    // Privacy section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Privacy")
                             .font(.headline)
                             .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                        
                         SettingsCard(
                             iconName: "location.fill",
                             title: "Location Sharing",
                             isToggle: true,
-                            toggleValue: $locationSharing
+                            toggleValue: $locationSharing,
+                            action: nil
                         )
                     }
                     .padding(.horizontal)
-
-                    // Extras
-                    VStack(spacing: 12) {
+                    
+                    // Extras section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Extras")
                             .font(.headline)
                             .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                        
                         SettingsCard(
                             iconName: "star.fill",
                             title: "Rate Me",
@@ -128,7 +114,7 @@ struct SettingsView: View {
                         ) {
                             openAppStoreReview()
                         }
-
+                        
                         SettingsCard(
                             iconName: "square.and.arrow.up",
                             title: "Share with Friends",
@@ -138,20 +124,20 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal)
-
-                    // General
-                    VStack(spacing: 12) {
+                    
+                    // General section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("General")
                             .font(.headline)
                             .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                        
                         SettingsCard(
                             iconName: "info.circle",
                             title: "App Version 1.0.0",
-                            toggleValue: .constant(false)
+                            toggleValue: .constant(false),
+                            action: nil
                         )
-
+                        
                         SettingsCard(
                             iconName: "questionmark.circle",
                             title: "Help & Feedback",
@@ -159,15 +145,19 @@ struct SettingsView: View {
                         ) {
                             openFeedback()
                         }
+                        
+                        Spacer(minLength: 20)
+                        Text("TriMet data. Not affiliated with TriMet.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal)
                     }
                     .padding(.horizontal)
-
-                    Spacer(minLength: 50)
                 }
-                .padding(.top)
+                .padding(.vertical)
             }
         }
-        // MARK: side‐effects when toggles change
+        // Side effects
         .onChange(of: pushNotifications) { enabled in
             if enabled {
                 UNUserNotificationCenter.current()
@@ -184,32 +174,21 @@ struct SettingsView: View {
                 locationManager.stopUpdatingLocation()
             }
         }
-        // MARK: share sheet
         .sheet(isPresented: $showShareSheet) {
             ActivityView(activityItems: ["Check out TriLive—the simplest transit ETA app!"])
         }
     }
-
-    // MARK: – Actions
+    
     private func openAppStoreReview() {
         let appID = "YOUR_APP_ID"
-        guard let url = URL(
-            string: "itms-apps://itunes.apple.com/app/id\(appID)?action=write-review"
-        ) else { return }
-        UIApplication.shared.open(url)
+        if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appID)?action=write-review") {
+            UIApplication.shared.open(url)
+        }
     }
-
+    
     private func openFeedback() {
-        guard let url = URL(string: "mailto:support@trilive.com") else { return }
-        UIApplication.shared.open(url)
-    }
-}
-
-// MARK: – Preview
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        // pass in your real LocationManager singleton or instance
-        SettingsView(locationManager: LocationManager())
-            .preferredColorScheme(.dark)
+        if let url = URL(string: "mailto:support@trilive.com") {
+            UIApplication.shared.open(url)
+        }
     }
 }

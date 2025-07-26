@@ -29,6 +29,7 @@ struct StationsMapView: View {
     var body: some View {
         Map(
             coordinateRegion: $region,
+            interactionModes: .all,
             annotationItems: viewModel.stations
         ) { stop in
             MapMarker(
@@ -37,7 +38,7 @@ struct StationsMapView: View {
                     longitude: stop.lon
                 ),
                 // highlights the focused stop in red
-                tint: (stop.id == focusStation.id) ? .red : .blue
+                tint: (stop.id == focusStation.id) ? .red : .blue,
             )
         }
         .onReceive(viewModel.$stations) { _ in

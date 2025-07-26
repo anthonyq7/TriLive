@@ -329,7 +329,7 @@ async def get_coords(stop_id: int, route_id: int):
     lngLatData = {}
 
     try:
-        for arrival in data.get("result_set", {}).get("blockPosition", []):
+        for arrival in data.get("resultSet", {}).get("blockPosition", []):
             if arrival.get("routeNumber") == route_id:
                 lng = arrival.get("lng", 200)
                 lat = arrival.get("lat", 200)

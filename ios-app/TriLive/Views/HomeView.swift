@@ -1,95 +1,83 @@
-//
-//  HomeView.swift
-//  TriLive
-//
-//  Created by Anthony Qin on 6/6/25.
-//
-
 import SwiftUI
 import CoreLocation
 
+
 struct HomeView: View {
-    // Injected
     @ObservedObject var favoritesManager: FavoritesManager
-    @ObservedObject var stopVM:            StopViewModel
-    @ObservedObject var timeManager:       TimeManager
-    @ObservedObject var locationManager:   LocationManager
-    @Binding       var navigationPath:     NavigationPath
+    @ObservedObject var stopVM: StopViewModel
+    @ObservedObject var timeManager: TimeManager
+    @ObservedObject var locationManager: LocationManager
+    @Binding var navigationPath: NavigationPath
     @Binding var favoriteRouteIDs: Set<Int>
 
-    
-    // Local
-    @State private var searchQuery       = ""
+    @State private var searchQuery = ""
     @FocusState private var isSearchFocused: Bool
     @State private var focusedRoute: Route?
-    
+
     var body: some View {
         ZStack {
-            Color("AppBackground")
-                .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
+            Color("AppBackground").ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 32) {
                     ExtractedLogoAndWelcomeView()
-                    
-                    // Your original SearchBar
+                        .padding(.top)
+
+                    // — SearchBar pulled above the list —
                     SearchBar(
                         locationManager: locationManager,
                         searchQuery:     $searchQuery,
-                        stopSelected:    Binding(
-                            get:  { stopVM.selectedStop != nil },
-                            set:  { _ in }
-                        ),
+                        stopSelected:    Binding(get: { stopVM.selectedStop != nil }, set: { _ in }),
                         selectedStop:    $stopVM.selectedStop,
                         stopList:        stopVM.filteredStops,
                         isFocused:       $isSearchFocused
                     )
+                    .padding()
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal)
                     .onChange(of: searchQuery, perform: stopVM.filter)
-                    .zIndex(1)
-                    
-                    // Only show when a stop is chosen
+                    .zIndex(2)
+
+                    // — Route results under the search bar —
                     if let stop = stopVM.selectedStop {
                         VStack(alignment: .leading, spacing: 16) {
                             Text(stop.name)
-                                .font(.title2)
+                                .font(.headline)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                            
-                            LazyVStack(spacing: 12) {
+                                .padding(.horizontal)
+
+                            LazyVStack(spacing: 16) {
                                 ForEach(stopVM.routes) { route in
                                     RouteCard(
-                                        parentStop:  stop,
-                                        line:        route,
-                                        isSelected:  focusedRoute == route,
+                                        parentStop: stop,
+                                        line:       route,
+                                        isSelected: focusedRoute == route,
                                         isFavorited: favoriteRouteIDs.contains(route.routeId),
-                                        onTap:       { confirmOrHighlight(route) },
+                                        onTap:      { confirmOrHighlight(route) },
                                         onFavoriteTapped: { toggleFavorite(route) }
                                     )
-                                    .padding(.horizontal, 12)
+                                    .padding()
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+                                    .padding(.horizontal)
                                 }
                             }
                             .animation(.easeIn, value: stopVM.routes)
                             .padding(.bottom, 24)
                         }
+                        .zIndex(0)
                     }
-                    
+
                     Spacer(minLength: 50)
                 }
-                .padding(.top, 24)
+                .padding(.vertical, 24)
             }
-            
-            // Confirm overlay
+
             selectionOverlay
         }
-        // Lifecyle & bindings
-        
-        // Load stops once
         .onAppear { Task { await stopVM.loadStops() } }
-        
-        // Dismiss keyboard
         .onTapGesture { isSearchFocused = false }
-        
-        // Poll / clear when selectedStop changes
         .onChange(of: stopVM.selectedStop) { newStop in
             if let s = newStop {
                 stopVM.startPollingArrivals(for: s)
@@ -98,18 +86,13 @@ struct HomeView: View {
                 stopVM.arrivals = []
                 stopVM.routes   = []
             }
-            // also clear any half-tapped overlay
             focusedRoute = nil
         }
-        
-        // Error alert on loadStops
         .alert("Error loading stops", isPresented: $stopVM.showError) {
             Button("OK", role: .cancel) { stopVM.showError = false }
         } message: {
-            Text(stopVM.errorMessage ?? "Unknown")
+            Text(stopVM.errorMessage ?? "Unknown error")
         }
-        
-        // Navigation on confirm
         .navigationDestination(for: Route.self) { route in
             if let parent = stopVM.selectedStop {
                 RouteDetailView(
@@ -123,12 +106,12 @@ struct HomeView: View {
         }
     }
     
-    // Overlay builder
+    // Confirm overlay
     @ViewBuilder
     private var selectionOverlay: some View {
         if let stop = stopVM.selectedStop,
-            let r  = focusedRoute,
-            let arrival = stopVM.arrivals.first(where: { $0.routeId == r.id && $0.eta == r.eta_unix}) {
+           let r  = focusedRoute,
+           let arrival = stopVM.arrivals.first(where: { $0.routeId == r.id && $0.eta == r.eta_unix }) {
             
             VisualEffectBlur(blurStyle: .systemThinMaterialDark)
                 .ignoresSafeArea()
@@ -157,8 +140,8 @@ struct HomeView: View {
                     }
                 )
                 .padding()
-                //.background(Color(.secondarySystemBackground).opacity(0.8))
-                .cornerRadius(12)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                 
                 Text("Tap again to confirm, or Cancel below")
                     .font(.subheadline)
@@ -166,13 +149,16 @@ struct HomeView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                 
-                Button("Cancel") {
-                    focusedRoute = nil
+                Button(action: { focusedRoute = nil }) {
+                    Text("Cancel")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color("StopColor"))
+                        .cornerRadius(16)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 24)
-                .background(Color(.systemBackground))
-                .cornerRadius(8)
+                .padding(.horizontal, 40)
             }
             .zIndex(2)
         }
@@ -180,7 +166,7 @@ struct HomeView: View {
     
     // Helpers
     private func confirmOrHighlight(_ route: Route) {
-        if focusedRoute == route{
+        if focusedRoute == route {
             navigate(to: route)
         } else {
             focusedRoute = route
@@ -199,26 +185,5 @@ struct HomeView: View {
         } else {
             favoriteRouteIDs.insert(route.routeId)
         }
-    }
-}
-
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-    // create one instance of each dependency
-    let favs    = FavoritesManager()
-    let stops   = StopViewModel()
-    let times   = TimeManager()
-    let locs    = LocationManager()
-    let path    = Binding.constant(NavigationPath())
-
-    HomeView(
-        favoritesManager: favs,
-        stopVM:           stops,
-        timeManager:      times,
-        locationManager:  locs,
-        navigationPath:   path,
-        favoriteRouteIDs: .constant([])   
-    )
-    .preferredColorScheme(.dark)
     }
 }

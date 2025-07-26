@@ -2,11 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>API_BASE_URL</key>
-    <string>https://trilive-backend.onrender.com</string>
-
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>This app needs your location to show nearby stops.</string>
-
+	<key>API_BASE_URL</key>
+	<string>https://trilive-backend.onrender.com</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>
