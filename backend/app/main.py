@@ -326,21 +326,20 @@ async def get_coords(stop_id: int, route_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, details=str(e))
     
-    lngLatData = {}
+    block_positions = data.get("resultSet", {}).get("blockPosition", [])
+    matches = []
 
-    try:
-        for arrival in data.get("resultSet", {}).get("blockPosition", []):
-            if arrival.get("routeNumber") == route_id:
-                lng = arrival.get("lng", 200)
-                lat = arrival.get("lat", 200)
-                
-                lngLatData["lng"] = lng
-                lngLatData["lat"] = lat
+    for pos in block_positions:
+        if str(pos.get("routeNumber")) == str(route_id):
+            lat = pos.get("lat")
+            lng = pos.get("lng")
+            if lat is not None and lng is not None:
+                matches.append({"lat": lat, "lng": lng, "vehicleID": pos.get("vehicleID")})
 
-                if lng != 200 and lat != 200:
-                    return lngLatData
-    except:
-        return {"error": "unable to get coordinates"}
+    if not matches:
+        raise HTTPException(status_code=404, detail="No vehicle positions found for that route at this stop")
+
+    return matches
 
 #added my routers from the previous backend
 app.include_router(station_router)
