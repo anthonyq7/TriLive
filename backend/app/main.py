@@ -343,7 +343,7 @@ async def get_coords(stop_id: int, route_id: int):
     return matches
 
 @app.get("/test/{stop_id}")
-async def get_coords(stop_id: int, route_id: int):
+async def get_coords(stop_id: int):
     url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
 
     try:
@@ -353,7 +353,7 @@ async def get_coords(stop_id: int, route_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, details=str(e))
     
-    return json.dumps(data)
+    return data
 
 #added my routers from the previous backend
 app.include_router(station_router)
