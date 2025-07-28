@@ -331,7 +331,7 @@ async def get_coords(stop_id: int, route_id: int):
 
     for pos in arrivals:
         if str(pos.get("route")) == str(route_id):
-            blockPosition = pos.get("blockPosition", [])
+            blockPosition = pos.get("blockPosition", {})
             lat = blockPosition.get("lat")
             lng = blockPosition.get("lng")
             if lat is not None and lng is not None:
