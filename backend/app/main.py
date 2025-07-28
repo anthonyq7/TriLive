@@ -330,7 +330,7 @@ async def get_coords(stop_id: int, route_id: int):
     matches = []
 
     for pos in arrivals:
-        if int(pos.get("routeNumber")) == int(route_id):
+        if str(pos.get("route")) == str(route_id):
             blockPosition = pos.get("blockPosition", [])
             lat = blockPosition.get("lat")
             lng = blockPosition.get("lng")
