@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class Route(BaseModel):
+    stop_id: int
     route_id:    int
     route_name:  str
     status:      str
