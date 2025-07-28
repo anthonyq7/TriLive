@@ -94,7 +94,7 @@ async def get_arrivals(stop_id: int):
                 route_name=arrival.get("fullSign") or arrival.get("shortSign") or "",
                 status=status,
                 eta=eta,
-                routeColor=arrival.get("routeColor", "")
+                routeColor=arrival.get("routeColor", ""),
                 vehicle_id=blockPosition.get("vehicleID")
             )
             arrivals_db[str(new_route.route_id) + ":" + str(eta)] = new_route.model_dump()
