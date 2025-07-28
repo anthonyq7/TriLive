@@ -342,7 +342,7 @@ async def get_coords(stop_id: int, route_id: int):
 
     return matches
 
-@app.test("/test/{stop_id}")
+@app.get("/test/{stop_id}")
 async def get_coords(stop_id: int, route_id: int):
     url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
 
