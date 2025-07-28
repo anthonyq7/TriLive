@@ -87,6 +87,7 @@ async def get_arrivals(stop_id: int):
         status = arrival.get("status", "") 
         if status in ["estimated", "scheduled"]: #checks to make sure route will occur (not delayed or cancelled)
             eta = arrival.get("estimated") or arrival.get("scheduled")
+            blockPosition = arrival.get("blockPosition", {})
             new_route = models.Route(
                 stop_id=stop_id,
                 route_id=arrival.get("route"),
@@ -94,6 +95,7 @@ async def get_arrivals(stop_id: int):
                 status=status,
                 eta=eta,
                 routeColor=arrival.get("routeColor", "")
+                vehicle_id=blockPosition.get("vehicleID")
             )
             arrivals_db[str(new_route.route_id) + ":" + str(eta)] = new_route.model_dump()
     
