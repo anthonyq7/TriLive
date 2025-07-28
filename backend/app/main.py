@@ -326,20 +326,34 @@ async def get_coords(stop_id: int, route_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, details=str(e))
     
-    block_positions = data.get("resultSet", {}).get("blockPosition", [])
+    arrivals = data.get("resultSet", {}).get("arrival", [])
     matches = []
 
-    for pos in block_positions:
-        if str(pos.get("routeNumber")) == str(route_id):
-            lat = pos.get("lat")
-            lng = pos.get("lng")
+    for pos in arrivals:
+        if int(pos.get("routeNumber")) == int(route_id):
+            blockPosition = pos.get("blockPosition", [])
+            lat = blockPosition.get("lat")
+            lng = blockPosition.get("lng")
             if lat is not None and lng is not None:
-                matches.append({"lat": lat, "lng": lng, "vehicleID": pos.get("vehicleID")})
+                matches.append({"lat": lat, "lng": lng, "vehicleID": blockPosition.get("vehicleID")})
 
     if not matches:
         raise HTTPException(status_code=404, detail="No vehicle positions found for that route at this stop")
 
     return matches
+
+@app.test("/test/{stop_id}")
+async def get_coords(stop_id: int, route_id: int):
+    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
+
+    try:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, details=str(e))
+    
+    return json.dumps(data)
 
 #added my routers from the previous backend
 app.include_router(station_router)
