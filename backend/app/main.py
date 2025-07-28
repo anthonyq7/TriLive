@@ -66,7 +66,7 @@ async def get_arrivals(stop_id: int):
     fetches arrival data from Trimet API or Redis cache,
     filters for estimated/scheduled status, caches results for 60s
     """
-    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&showPosition=true&minutes=60"
+    url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
     cache_key = f"stop:{stop_id}:arrivals"
     cached_data = redis_client.get(cache_key)
     
@@ -317,8 +317,8 @@ async def track(ws: WebSocket, stop_id: int, route_id: int):
     finally:
         await ws.close()
 
-@app.get("/track_coords/{stop_id}/{route_id}")
-async def get_coords(stop_id: int, route_id: int):
+@app.get("/track_coords/{stop_id}/{route_id}/{vehicle_id}")
+async def get_coords(stop_id: int, route_id: int, vehicle_id: int):
     url = f"https://developer.trimet.org/ws/v2/arrivals?locIDs={stop_id}&showPosition=true&appID={TRIMET_APP_ID}&minutes=60"
 
     try:
@@ -332,8 +332,8 @@ async def get_coords(stop_id: int, route_id: int):
     matches = []
 
     for pos in arrivals:
-        if str(pos.get("route")) == str(route_id):
-            blockPosition = pos.get("blockPosition", {})
+        blockPosition = pos.get("blockPosition", {})
+        if (str(pos.get("route")) == str(route_id)) and str(blockPosition.get("vehicleID")) == str(vehicle_id):
             lat = blockPosition.get("lat")
             lng = blockPosition.get("lng")
             if lat is not None and lng is not None:
