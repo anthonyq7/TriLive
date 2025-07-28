@@ -95,7 +95,7 @@ async def get_arrivals(stop_id: int):
                 status=status,
                 eta=eta,
                 routeColor=arrival.get("routeColor", ""),
-                vehicle_id=blockPosition.get("vehicleID", -1)
+                vehicle_id=blockPosition.get("vehicleID")
             )
             arrivals_db[str(new_route.route_id) + ":" + str(eta)] = new_route.model_dump()
     
@@ -337,7 +337,7 @@ async def get_coords(stop_id: int, route_id: int, vehicle_id: int):
             lat = blockPosition.get("lat")
             lng = blockPosition.get("lng")
             if lat is not None and lng is not None:
-                matches.append({"lat": lat, "lng": lng, "vehicleID": blockPosition.get("vehicleID")})
+                matches.append({"lat": lat, "lng": lng, "vehicleId": blockPosition.get("vehicleID")})
 
     if not matches:
         raise HTTPException(status_code=404, detail="No vehicle positions found for that route at this stop")
