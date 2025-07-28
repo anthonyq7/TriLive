@@ -7,6 +7,7 @@ class Route(BaseModel):
     status:      str
     eta:         int
     route_color: str = Field(alias="routeColor")
+    vehicle_id: int
 
     class Config:
         orm_mode = True
