@@ -84,7 +84,8 @@ struct FavoriteCard: View {
         status:     "IN_SERVICE",
         eta:        "5",
         routeColor: "green",
-        eta_unix: 17509349032
+        eta_unix: 17509349032,
+        vehicleId: -1
     )
 
     FavoriteCard(

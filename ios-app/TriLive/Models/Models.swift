@@ -17,60 +17,61 @@ struct Stop: Codable, Identifiable, Equatable {
 
 // model for a route arrival entry
 struct Route: Codable, Hashable, Identifiable {
-  let stopId:     Int
-  let routeId:    Int
-  let routeName:  String
-  let status:     String
-  let eta:        String
-  let routeColor: String
-  let eta_unix:   Int
-
-  var id: Int { routeId }
+    let stopId:     Int
+    let routeId:    Int
+    let routeName:  String
+    let status:     String
+    let eta:        String
+    let routeColor: String
+    let eta_unix:   Int
+    let vehicleId: Int
+    
+    var id: Int { routeId }
 }
 // model for a favorite route entry
 struct Favorite: Identifiable, Codable, Hashable {
-  var id: UUID = .init()
-  let parentStopName: String
-  let stopId: Int
-  let route: Route
+    var id: UUID = .init()
+    let parentStopName: String
+    let stopId: Int
+    let route: Route
 }
 
 // store for managing favorites in UserDefaults
 class FavoritesStore: ObservableObject {
-  @Published private(set) var items: [Favorite] = []
-
-  // creates key for UserDefaults storage
-  private let key = "favoriteRoutesData"
-
-  init() {
-    if
-      let data = UserDefaults.standard.data(forKey: key),
-      let decoded = try? JSONDecoder().decode([Favorite].self, from: data)
-    {
-      items = decoded
+    @Published private(set) var items: [Favorite] = []
+    
+    // creates key for UserDefaults storage
+    private let key = "favoriteRoutesData"
+    
+    init() {
+        if
+            let data = UserDefaults.standard.data(forKey: key),
+            let decoded = try? JSONDecoder().decode([Favorite].self, from: data)
+        {
+            items = decoded
+        }
     }
-  }
-
-  // adds or removes favorite, then saves
-  func toggle(_ fav: Favorite) {
-    if let idx = items.firstIndex(of: fav) {
-      items.remove(at: idx)
-    } else {
-      items.append(fav)
+    
+    // adds or removes favorite, then saves
+    func toggle(_ fav: Favorite) {
+        if let idx = items.firstIndex(of: fav) {
+            items.remove(at: idx)
+        } else {
+            items.append(fav)
+        }
+        save()
     }
-    save()
-  }
-
-   // encodes items as JSON and writes to UserDefaults
-  private func save() {
-    if let data = try? JSONEncoder().encode(items) {
-      UserDefaults.standard.set(data, forKey: key)
+    
+    // encodes items as JSON and writes to UserDefaults
+    private func save() {
+        if let data = try? JSONEncoder().encode(items) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
     }
-  }
-
-  func contains(_ fav: Favorite) -> Bool {
-    // returns whether a favorite is already in the store
-    items.contains(fav)
-  }
+    
+    func contains(_ fav: Favorite) -> Bool {
+        // returns whether a favorite is already in the store
+        items.contains(fav)
+    }
 }
 

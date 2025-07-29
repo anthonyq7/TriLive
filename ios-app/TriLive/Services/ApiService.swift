@@ -29,6 +29,7 @@ struct APIClient {
     }
     
     
+    
     // fetch arrivals from GET /arrivals/{stop_id}
     func fetchArrivals(for stopId: Int) async throws -> [Arrival] {
         let url = baseURL
@@ -53,7 +54,8 @@ struct APIClient {
                 let name  = dict["route_name"] as? String,
                 let status = dict["status"]    as? String,
                 let eta    = dict["eta"]       as? Int,
-                let color  = dict["route_color"] as? String
+                let color  = dict["route_color"] as? String,
+            let vehicle_id = dict["vehicle_id"] as? Int
             else {
                 print("⚠️ Skipping malformed arrival entry:", value)
                 continue
@@ -63,7 +65,8 @@ struct APIClient {
                 routeName:  name,
                 status:     status,
                 eta:        eta,
-                routeColor: color
+                routeColor: color,
+                vehicleId: vehicle_id
             )
             arrivals.append(a)
         }
@@ -71,9 +74,32 @@ struct APIClient {
         // 3) Return the array
         return arrivals
     }
+    
+    struct VehiclePosition: Decodable {
+        let lat: Double
+        let lng: Double
+        let vehicleId: Int
+    }
 
+}
 
-
+extension APIClient {
+    
+    func fetchVehiclePositions(for stopId: Int, routeId: Int, vehicleId: Int) async throws -> [VehiclePosition] {
+        let url = baseURL
+            .appendingPathComponent("track_coords")
+            .appendingPathComponent("\(stopId)")
+            .appendingPathComponent("\(routeId)")
+            .appendingPathComponent("\(vehicleId)")
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+        if let str = String(data: data, encoding: .utf8) {
+            print("RAW /track_coords/\(stopId)/\(routeId)/\(vehicleId): \(str)")
+        }
+        return try decoder.decode([VehiclePosition].self, from: data)
+    }
 }
 
 

@@ -103,7 +103,8 @@ struct FavoritesView: View {
                     status:     arrival.status,
                     eta:        "\(arrival.minutesUntilArrival)",
                     routeColor: arrival.routeColor,
-                    eta_unix:   arrival.eta
+                    eta_unix:   arrival.eta,
+                    vehicleId: arrival.vehicleId
                 )
 
                 RouteCard(

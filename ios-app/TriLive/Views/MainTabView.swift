@@ -26,9 +26,7 @@ struct MainTabView: View {
             }
             .tag(TabSelection.home)
             
-            NavigationStack(path: $navigationPath) {
-                SettingsView(locationManager: locationManager)
-            }
+            SettingsView(locationManager: locationManager)
             .tabItem {
                 Label("Settings", systemImage: "gearshape.fill")
             }
