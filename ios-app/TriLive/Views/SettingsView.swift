@@ -192,3 +192,8 @@ struct SettingsView: View {
         }
     }
 }
+
+
+#Preview {
+    SettingsView(locationManager: LocationManager())
+}

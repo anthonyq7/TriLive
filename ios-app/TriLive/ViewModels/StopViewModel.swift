@@ -78,16 +78,23 @@ final class StopViewModel: ObservableObject {
     func loadArrivals(for stop: Stop) async {
         print(" Fetching arrivals for stopID = \(stop.id)")
         isLoadingArrivals = true
-        showArrivalsError = false
-        
+        showArrivalsError   = false
+
         do {
             let raw = try await api.fetchArrivals(for: stop.id)
             print(" Raw arrivals JSON decoded: \(raw.count) items")
-            
-            // … collapse into earliestPerRoute / build routes …
-            self.arrivals = raw
-            let earliestPerRoute = Dictionary(grouping: raw, by: \.routeId)
-                .compactMap { _, arrs in arrs.min(by: { $0.arrivalDate < $1.arrivalDate }) }
+
+            // strip out any arrivals whose vehicleId is -1
+            let validArrivals = raw.filter { $0.vehicleId != -1 }
+
+            // assign only the valid ones
+            self.arrivals = validArrivals
+
+            // group & pick earliest per route, only on validArrivals
+            let earliestPerRoute = Dictionary(grouping: validArrivals, by: \.routeId)
+                .compactMap { _, arrs in
+                    arrs.min(by: { $0.arrivalDate < $1.arrivalDate })
+                }
             
             self.routes = earliestPerRoute
                 .sorted(by: { $0.arrivalDate < $1.arrivalDate })
@@ -99,18 +106,21 @@ final class StopViewModel: ObservableObject {
                         status:     a.status,
                         eta:        "\(a.minutesUntilArrival)",
                         routeColor: a.routeColor,
-                        eta_unix: a.eta
+                        eta_unix:   a.eta,
+                        vehicleId:  a.vehicleId
                     )
                 }
+
             print("[DEBUG] routes.count = \(self.routes.count); ids = \(self.routes.map(\.routeId))")
             print(" routes built: \(self.routes.count)")
-        } catch {
+        }
+        catch {
             print("loadArrivals error: \(error)")
             showArrivalsError = true
             arrivals = []
             routes   = []
         }
-        
+
         isLoadingArrivals = false
     }
     
@@ -118,7 +128,7 @@ final class StopViewModel: ObservableObject {
         timer?.cancel()
         Task { await loadArrivals(for: stop) }
         timer = Timer
-            .publish(every: 15, on: .main, in: .common)
+            .publish(every: 10, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 Task { await self?.loadArrivals(for: stop) }
