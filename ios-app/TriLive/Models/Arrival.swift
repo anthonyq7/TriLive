@@ -22,7 +22,7 @@ struct Arrival: Identifiable, Decodable, Equatable {
     
     var arrivalDate: Date {
         // converts eta (ms) to a Date object
-        Date(timeIntervalSince1970: Double(eta) / 1_000)
+        Date(timeIntervalSince1970: Double(eta) / 1000)
     }
     
     var minutesUntilArrival: Int {

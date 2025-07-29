@@ -48,29 +48,36 @@ struct HomeView: View {
                     // Stop Arrivals & Routes
                     if let stop = stopVM.selectedStop {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text(stop.name)
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal)
-                            
-                            LazyVStack(spacing: 16) {
-                                ForEach(stopVM.routes) { route in
-                                    RouteCard(
-                                        parentStop: stop,
-                                        line: route,
-                                        isSelected: focusedRoute == route,
-                                        isFavorited: favoriteRouteIDs.contains(route.routeId),
-                                        onTap: { confirmOrHighlight(route) },
-                                        onFavoriteTapped: { toggleFavorite(route) }
-                                    )
-                                    .padding()
-                                    .cornerRadius(16)
-                                    .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+                            if !stopVM.routes.isEmpty {
+                                Text("\(stop.name) \(stop.dir ?? "")")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
                                     .padding(.horizontal)
+                                
+                                LazyVStack(spacing: 16) {
+                                    ForEach(stopVM.routes) { route in
+                                        RouteCard(
+                                            parentStop: stop,
+                                            line: route,
+                                            isSelected: focusedRoute == route,
+                                            isFavorited: favoriteRouteIDs.contains(route.routeId),
+                                            onTap: { confirmOrHighlight(route) },
+                                            onFavoriteTapped: { toggleFavorite(route) }
+                                        )
+                                        .padding()
+                                        .cornerRadius(16)
+                                        .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+                                        .padding(.horizontal)
+                                    }
                                 }
+                                .animation(.easeIn, value: stopVM.routes)
+                                .padding(.bottom, 24)
+                            } else {
+                                Text("No upcoming arrivals")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal)
                             }
-                            .animation(.easeIn, value: stopVM.routes)
-                            .padding(.bottom, 24)
                         }
                     }
                     
