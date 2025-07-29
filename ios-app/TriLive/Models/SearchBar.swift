@@ -24,6 +24,7 @@ struct SearchBar: View {
                     .onSubmit(performSearch)
                     .onChange(of: searchQuery, perform: onQueryChange)
                     .foregroundColor(.primary)
+                Spacer()
                 if !searchQuery.isEmpty {
                     Button(action: clear) {
                         Image(systemName: "xmark.circle.fill")
