@@ -85,7 +85,7 @@ final class StopViewModel: ObservableObject {
             print(" Raw arrivals JSON decoded: \(raw.count) items")
 
             // strip out any arrivals whose vehicleId is -1
-            let validArrivals = raw.filter { $0.vehicleId != -1 }
+            let validArrivals = raw.filter { $0.vehicleId != -1 && $0.minutesUntilArrival > 0}
 
             // assign only the valid ones
             self.arrivals = validArrivals
