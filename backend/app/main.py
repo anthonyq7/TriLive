@@ -170,8 +170,7 @@ async def fetch_stops():
     url = (
         f"https://developer.trimet.org/ws/v2/stops"
         f"?appID={TRIMET_APP_ID}"
-        f"&bbox=-122.836,45.387,-122.471,45.608"
-        f"&maxStops=5000"
+        f"&bbox=-123.15500848101786,45.065490629501255,-121.741779801749,45.738910476408655"
         f"&json=true"
     )
 
