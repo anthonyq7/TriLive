@@ -17,6 +17,11 @@ struct RouteDetailView: View {
     private let cardShadow = Color.black.opacity(0.2)
     
     @StateObject private var vehicleTracker: VehicleTrackerViewModel
+    @StateObject private var notificationService = NotificationService.shared
+    
+    // Tracks which notifications have been sent to prevent duplicates
+    @State private var sentArrivalNotifications: Set<String> = []
+    @State private var sentThreeMinuteNotifications: Set<String> = []
     
     init(
         parentStop: Stop,
@@ -68,6 +73,39 @@ struct RouteDetailView: View {
         .navigationBarBackButtonHidden(true)
         .onAppear(perform: onAppear)
         .onDisappear(perform: onDisappear)
+        .onChange(of: arrivalsVM.arrivals) { newArrivals in
+            print("Arrivals changed in RouteDetailView, count: \(newArrivals.count)")
+            if let next = newArrivals.first {
+                // Only schedule notifications for the current route being tracked
+                if next.routeId == route.routeId {
+                    print("Arrivals updated in RouteDetailView: \(next.routeName)")
+                    print("Minutes until arrival: \(next.minutesUntilArrival)")
+                    
+                    // Check if arrival notification has already been sent
+                    let arrivalId = next.id.uuidString
+                    if !sentArrivalNotifications.contains(arrivalId) {
+                        notificationService.scheduleArrivalNotification(for: next, stopName: parentStop.name)
+                        sentArrivalNotifications.insert(arrivalId)
+                        print("Scheduled arrival notification for arrival ID: \(arrivalId)")
+                    } else {
+                        print("Arrival notification already sent for arrival ID: \(arrivalId)")
+                    }
+                    
+                    // Check if 3-minute notification has already been sent
+                    if !sentThreeMinuteNotifications.contains(arrivalId) {
+                        notificationService.scheduleThreeMinuteNotification(for: next, stopName: parentStop.name)
+                        sentThreeMinuteNotifications.insert(arrivalId)
+                        print("Scheduled 3-minute notification for arrival ID: \(arrivalId)")
+                    } else {
+                        print("3-minute notification already sent for arrival ID: \(arrivalId)")
+                    }
+                } else {
+                    print("Skipping notification for route \(next.routeId) - not the tracked route \(route.routeId)")
+                }
+            } else {
+                print("No arrivals in onChange handler")
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
     }
     
@@ -126,7 +164,7 @@ struct RouteDetailView: View {
                 .font(.headline)
                 .foregroundColor(.white)
             
-            LiveProgressView(arrivals: arrivalsVM, isLiveActive: $isLiveActive, timeManager: timeManager, stopVM: stopVM, vehicleTracker: vehicleTracker, navPath: $navPath)
+            LiveProgressView(arrivals: arrivalsVM, isLiveActive: $isLiveActive, timeManager: timeManager, stopVM: stopVM, vehicleTracker: vehicleTracker, navPath: $navPath, stopName: parentStop.name)
                 .padding()
                 .cornerRadius(cardRadius)
                 .shadow(color: cardShadow, radius: 8, x: 0, y: 4)
@@ -164,6 +202,19 @@ struct RouteDetailView: View {
             timeManager.startTimer()
             arrivalsVM.startPolling()
             vehicleTracker.startTracking()
+            
+            // Request notification permission and schedule notifications
+            let granted = await notificationService.requestPermission()
+            print("Permission request result: \(granted)")
+            notificationService.checkNotificationStatus()
+            
+            if granted {
+                print("Notification permission granted in RouteDetailView")
+                // Schedule notifications when arrivals are loaded
+                await scheduleNotificationsWhenArrivalsLoad()
+            } else {
+                print("Notification permission denied in RouteDetailView")
+            }
         }
     }
 
@@ -171,6 +222,11 @@ struct RouteDetailView: View {
         timeManager.stopTimer()
         arrivalsVM.stopPolling()
         vehicleTracker.stopTracking()
+        notificationService.cancelAllNotifications()
+        
+        // Clear notification tracking for next session
+        sentArrivalNotifications.removeAll()
+        sentThreeMinuteNotifications.removeAll()
     }
     
     private func colorFromHex(_ hex: String) -> Color {
@@ -181,5 +237,44 @@ struct RouteDetailView: View {
         let g = Double((int >> 8) & 0xFF) / 255.0
         let b = Double(int & 0xFF) / 255.0
         return Color(.sRGB, red: r, green: g, blue: b, opacity: 1)
+    }
+    
+    private func scheduleNotificationsWhenArrivalsLoad() async {
+        // Wait a bit for arrivals to load
+        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        
+        print("Checking arrivals for notifications...")
+        print("Total arrivals: \(arrivalsVM.arrivals.count)")
+        
+        if let next = arrivalsVM.arrivals.first {
+            // Only schedule notifications for the current route being tracked
+            if next.routeId == route.routeId {
+                print("Scheduling notifications for arrival: \(next.routeName) at \(next.arrivalDate)")
+                print("Minutes until arrival: \(next.minutesUntilArrival)")
+                
+                // Check if arrival notification has already been sent
+                let arrivalId = next.id.uuidString
+                if !sentArrivalNotifications.contains(arrivalId) {
+                    notificationService.scheduleArrivalNotification(for: next, stopName: parentStop.name)
+                    sentArrivalNotifications.insert(arrivalId)
+                    print("Scheduled arrival notification for arrival ID: \(arrivalId)")
+                } else {
+                    print("Arrival notification already sent for arrival ID: \(arrivalId)")
+                }
+                
+                // Check if 3-minute notification has already been sent
+                if !sentThreeMinuteNotifications.contains(arrivalId) {
+                    notificationService.scheduleThreeMinuteNotification(for: next, stopName: parentStop.name)
+                    sentThreeMinuteNotifications.insert(arrivalId)
+                    print("Scheduled 3-minute notification for arrival ID: \(arrivalId)")
+                } else {
+                    print("3-minute notification already sent for arrival ID: \(arrivalId)")
+                }
+            } else {
+                print("Skipping notification for route \(next.routeId) - not the tracked route \(route.routeId)")
+            }
+        } else {
+            print("No arrivals available for notification scheduling")
+        }
     }
 }

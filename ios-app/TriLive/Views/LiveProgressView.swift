@@ -8,6 +8,8 @@ struct LiveProgressView: View {
     @ObservedObject var stopVM: StopViewModel
     @ObservedObject var vehicleTracker: VehicleTrackerViewModel
     @Binding var navPath: NavigationPath
+    let stopName: String
+    @StateObject private var notificationService = NotificationService.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -36,6 +38,8 @@ struct LiveProgressView: View {
                     .cornerRadius(2)
                     .onChange(of: elapsed) { newValue in
                         if Double(newValue) >= Double(totalSec) {
+                            // Cancel all notifications when tracking stops
+                            notificationService.cancelAllNotifications()
                             isLiveActive = false
                             timeManager.stopTimer()
                             stopVM.stopPollingArrivals()

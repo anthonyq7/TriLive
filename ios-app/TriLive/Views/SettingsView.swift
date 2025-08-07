@@ -50,8 +50,6 @@ struct SettingsCard: View {
 
 struct SettingsView: View {
     @ObservedObject var locationManager: LocationManager
-    @AppStorage("pushNotifications") private var pushNotifications = true
-    @AppStorage("locationSharing")   private var locationSharing   = true
     @State private var showShareSheet = false
     
     var body: some View {
@@ -69,35 +67,19 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal)
                     
-                    // Notification section
+                    // Permissions section
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Notifications")
+                        Text("Permissions")
                             .font(.headline)
                             .foregroundColor(.gray)
                         
                         SettingsCard(
-                            iconName: "bell.fill",
-                            title: "Push Notifications",
-                            isToggle: true,
-                            toggleValue: $pushNotifications,
-                            action: nil
-                        )
-                    }
-                    .padding(.horizontal)
-                    
-                    // Privacy section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Privacy")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        
-                        SettingsCard(
-                            iconName: "location.fill",
-                            title: "Location Sharing",
-                            isToggle: true,
-                            toggleValue: $locationSharing,
-                            action: nil
-                        )
+                            iconName: "gear",
+                            title: "Manage Permissions",
+                            toggleValue: .constant(false)
+                        ) {
+                            openSettings()
+                        }
                     }
                     .padding(.horizontal)
                     
@@ -157,25 +139,19 @@ struct SettingsView: View {
                 .padding(.vertical)
             }
         }
-        // Side effects
-        .onChange(of: pushNotifications) { enabled in
-            if enabled {
-                UNUserNotificationCenter.current()
-                    .requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
-                UIApplication.shared.registerForRemoteNotifications()
-            } else {
-                UIApplication.shared.unregisterForRemoteNotifications()
-            }
-        }
-        .onChange(of: locationSharing) { enabled in
-            if enabled {
-                locationManager.startUpdatingLocation()
-            } else {
-                locationManager.stopUpdatingLocation()
-            }
-        }
         .sheet(isPresented: $showShareSheet) {
             ActivityView(activityItems: ["Check out TriLive—the simplest transit ETA app!"])
+        }
+    }
+    
+    private func openSettings() {
+        // Debug: Print bundle identifier
+        print("Bundle identifier: \(Bundle.main.bundleIdentifier ?? "nil")")
+        
+        // Open directly to this app's settings page
+        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            print("Opening settings URL: \(settingsUrl)")
+            UIApplication.shared.open(settingsUrl)
         }
     }
     
