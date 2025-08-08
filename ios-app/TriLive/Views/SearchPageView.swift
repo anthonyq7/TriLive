@@ -19,18 +19,43 @@ struct SearchPageView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         guard !raw.isEmpty else { return [] }
-        let variants = [ raw,
-                         raw.replacingOccurrences(of: "and", with: "&"),
-                         raw.replacingOccurrences(of: "&", with: "and") ]
-        return stopList.filter { stop in
-            let full = (stop.name + " " + (stop.dir ?? "")).lowercased()
-            let nameMatches = variants.contains { full.contains($0) }
+        
+        let normalizedRaw = raw.replacingOccurrences(of: "&", with: " and ")
+        let queryWords = normalizedRaw
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+        
+        //Match 90% of words
+        let minMatchCount = max(1, Int(Double(queryWords.count) / 1.11))
+        
+        let scoredStops: [(stop: Stop, score: Int, isExact: Bool, numberMatch: Bool)] = stopList.map { stop in
+            let stopName = (stop.name + " " + (stop.dir ?? "")).lowercased()
+                .replacingOccurrences(of: "&", with: " and ")
             
-            let numberString = String(stop.id)
-            let numberMatches = numberString.contains(raw)
+            let matchCount = queryWords.filter { stopName.contains($0) }.count
+            let isExact = stopName == normalizedRaw
+            let numberMatch = String(stop.id).contains(raw)
             
-            return nameMatches || numberMatches
+            return (stop, matchCount, isExact, numberMatch)
         }
+        
+        let filtered = scoredStops
+            .filter { ($0.score >= minMatchCount) || $0.numberMatch }
+            .sorted {
+                
+                if $0.numberMatch != $1.numberMatch {
+                    return $0.numberMatch
+                } else if $0.isExact != $1.isExact {
+                    return $0.isExact
+                } else if $0.score != $1.score {
+                    return $0.score > $1.score
+                } else {
+                    return $0.stop.name < $1.stop.name
+                }
+            }
+            .prefix(15)
+        
+        return Array(filtered.map { $0.stop })
     }
     
     var body: some View {
