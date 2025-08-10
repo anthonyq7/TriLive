@@ -1,3 +1,18 @@
+[![License](https://img.shields.io/github/license/anthonyq7/trilive)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/anthonyq7/trilive)](https://github.com/anthonyq7/trilive/commits/main)
+[![Stars](https://img.shields.io/github/stars/anthonyq7/trilive?style=social)](https://github.com/anthonyq7/trilive/stargazers)
+[![Issues](https://img.shields.io/github/issues/anthonyq7/trilive)](https://github.com/anthonyq7/trilive/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/anthonyq7/trilive)](https://github.com/anthonyq7/trilive/pulls)
+[![Top Language](https://img.shields.io/github/languages/top/anthonyq7/trilive)](https://github.com/anthonyq7/trilive)
+[![Repo Size](https://img.shields.io/github/repo-size/anthonyq7/trilive)](https://github.com/anthonyq7/trilive)
+[![Code Size](https://img.shields.io/github/languages/code-size/anthonyq7/trilive)](https://github.com/anthonyq7/trilive)
+
+[![SwiftUI](https://img.shields.io/badge/Frontend-SwiftUI-FA7343?logo=swift)](https://developer.apple.com/xcode/swiftui/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Language-Python-3776AB?logo=python)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Cache-Redis-DC382D?logo=redis)](https://redis.io/)
+
 <p align="center">
   <img src="ios-app/TriLive/Assets.xcassets/TriLiveLogo.imageset/TriLiveLogo.png" width="250" alt="TriLive Logo">
 </p>
