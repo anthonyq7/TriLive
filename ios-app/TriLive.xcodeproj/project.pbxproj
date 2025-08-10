@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		BBED4E0C2E459C9800E65F78 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = BBED4E0B2E459C9800E65F78 /* FirebaseAnalytics */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		BB6D16B92DF3D3E4007FCE24 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -69,7 +65,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BBED4E0C2E459C9800E65F78 /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,7 +125,6 @@
 			);
 			name = TriLive;
 			packageProductDependencies = (
-				BBED4E0B2E459C9800E65F78 /* FirebaseAnalytics */,
 			);
 			productName = TriLive;
 			productReference = BB6D16AB2DF3D3E3007FCE24 /* TriLive.app */;
@@ -215,7 +209,6 @@
 			mainGroup = BB6D16A22DF3D3E3007FCE24;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				BBED4E0A2E459C9800E65F78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB6D16AC2DF3D3E3007FCE24 /* Products */;
@@ -594,25 +587,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		BBED4E0A2E459C9800E65F78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.1.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		BBED4E0B2E459C9800E65F78 /* FirebaseAnalytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = BBED4E0A2E459C9800E65F78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BB6D16A32DF3D3E3007FCE24 /* Project object */;
 }

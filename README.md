@@ -21,6 +21,8 @@
 
 TriLive is a real-time iOS transit tracker that shows live bus & train ETAs and search by location. Built as a summer project by Anthony “Ant” Qin and Brian Maina "B.M.M", we plan to deploy it as an App Store release. Powered by SwiftUI + Core Location and a Docker-containerized FastAPI + PostgreSQL + Redis backend.
 
+TriLive is currently undergoing closed beta testing through TestFlight. To get involved, please contact us.
+
 ---
 
 ## Table of Contents
@@ -59,7 +61,7 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 - **Backend**: FastAPI, Pydantic, SQLAlchemy, Uvicorn  
 - **Database**: PostgreSQL  
 - **Cache**: Redis  
-- **Containers**: Docker & Docker Compose  
+- **Containers**: Docker 
 ---
 
 ## Production
@@ -72,7 +74,7 @@ TriLive delivers live transit ETAs for buses and trains at nearby stops in a sle
 
 ### Backend & Frontend Intergration
 
-Our Dockerized FastAPI backend (Pydantic, SQLAlchemy) runs on Render with managed PostgreSQL and Redis, automatically building and deploying on each push to main. The SwiftUI front end calls the secure HTTPS JSON API for live ETAs, favorites syncing, and location-aware search.
+Our Dockerized FastAPI backend (Pydantic, SQLAlchemy) runs on Render with managed PostgreSQL and Redis, automatically building and deploying on each push to main. The SwiftUI front end calls the secure REST API for live ETAs, favorites syncing, and location-aware search.
 
 ## Potential Updates
 - User accounts & cross-device sync
@@ -90,7 +92,7 @@ https://github.com/anthonyq7/TriLive/issues
 
 ---
 ## Design Assets
-See TriLive Mockups.pdf in the repo root for UI/UX wireframes and flow diagrams.
+See TriLive Mockups.pdf in the repo root for UI/UX wireframes.
 
 ---
 ## Contact
