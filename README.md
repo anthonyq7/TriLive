@@ -21,7 +21,11 @@
 
 TriLive is a real-time iOS transit tracker that shows live bus & train ETAs and search by location. Built as a summer project by Anthony “Ant” Qin and Brian Maina "B.M.M", we plan to deploy it as an App Store release. Powered by SwiftUI + Core Location and a Docker-containerized FastAPI + PostgreSQL + Redis backend.
 
-TriLive is currently undergoing closed beta testing through TestFlight. To get involved, please contact us.
+TriLive is currently undergoing closed beta testing through TestFlight. To get involved, please contact us or join our beta directly:
+
+[![TestFlight](https://img.shields.io/badge/TestFlight-Join%20Beta-007AFF?logo=testflight)](https://testflight.apple.com/join/11pUMtrz)
+
+**Join the Beta**: [https://testflight.apple.com/join/11pUMtrz](https://testflight.apple.com/join/11pUMtrz)
 
 ---
 
