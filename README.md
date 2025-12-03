@@ -23,9 +23,7 @@ TriLive is a real-time iOS transit tracker that shows live bus & train ETAs and 
 
 TriLive is currently undergoing closed beta testing through TestFlight. To get involved, please contact us or join our beta directly:
 
-[![TestFlight](https://img.shields.io/badge/TestFlight-Join%20Beta-007AFF?logo=testflight)](https://testflight.apple.com/join/11pUMtrz)
-
-**Join the Beta**: [https://testflight.apple.com/join/11pUMtrz](https://testflight.apple.com/join/11pUMtrz)
+**Try it on the App Store!**: [Download](https://apps.apple.com/us/app/trilive-real-time-transit-app/id6749755575)
 
 ---
 
